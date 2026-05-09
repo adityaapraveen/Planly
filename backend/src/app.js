@@ -10,6 +10,7 @@ import { errorHandler } from './middlewares/errorHandler.js'
 import { authRouter } from './routes/auth.routes.js'
 import { projectRouter } from './routes/project.routes.js'
 import { drawingRouter } from './routes/drawing.routes.js'
+import { analysisRouter } from './routes/analysis.routes.js'
 
 
 export const app = express()
@@ -40,6 +41,7 @@ app.use('/api/v1/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/projects', projectRouter)
 app.use('/api/projects', drawingRouter)
+app.use('/api', analysisRouter)
 
 app.use(notfound)
 app.use(errorHandler)
