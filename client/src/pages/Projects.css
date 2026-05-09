@@ -1,0 +1,8 @@
+.projects-page { animation: fadeIn var(--duration-slow) var(--ease-default); }
+.projects-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); flex-wrap: wrap; gap: var(--space-3); }
+.projects-header h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); }
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+@media (max-width: 640px) { .projects-grid { grid-template-columns: 1fr; } }
+.project-form { display: flex; flex-direction: column; gap: var(--space-5); }
+.confirm-text { font-size: var(--font-size-base); color: var(--neutral-600); line-height: var(--leading-relaxed); }
+.confirm-text strong { color: var(--neutral-900); }

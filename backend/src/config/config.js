@@ -63,6 +63,6 @@ export const config = {
     AI_PROVIDER: parsed.data.AI_PROVIDER,
     OPENAI_MODEL: parsed.data.OPENAI_MODEL,
     OPENAI_API_KEY: parsed.data.OPENAI_API_KEY,
-    OPENROUTER_API_KEY: parsed.data.OPENAI_API_KEY,
+    OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL
 }

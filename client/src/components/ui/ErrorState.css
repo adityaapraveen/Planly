@@ -1,0 +1,35 @@
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-16) var(--space-6);
+  animation: fadeInUp var(--duration-slow) var(--ease-default);
+}
+
+.error-state-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger-50);
+  border-radius: var(--radius-xl);
+  color: var(--danger-500);
+  margin-bottom: var(--space-5);
+}
+
+.error-state h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--neutral-800);
+  margin-bottom: var(--space-2);
+}
+
+.error-state p {
+  font-size: var(--font-size-base);
+  color: var(--neutral-400);
+  max-width: 400px;
+  margin-bottom: var(--space-6);
+}

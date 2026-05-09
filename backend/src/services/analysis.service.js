@@ -1,14 +1,17 @@
 import fs from 'fs'
-import pdfParse from 'pdf-parse'
-
+import { PDFParse } from 'pdf-parse'
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
 import { generateAIResponse } from './ai/ai.service.js'
 import { drawingReviewSystemPrompt } from '../prompts/drawingReview.prompt.js'
 
+const AI_TIMEOUT_MS = 60_000
+
 const extractPdfText = async (filePath) => {
     const buffer = fs.readFileSync(filePath)
-    const data = await pdfParse(buffer)
+    const parser = new PDFParse({ data: buffer })
+    const data = await parser.getText()
+    await parser.destroy()
 
     return data.text
 }
@@ -22,10 +25,30 @@ const safeJsonParse = (value) => {
 }
 
 const normalizeAnalysis = (analysis) => {
+    if (!analysis || typeof analysis !== 'object') {
+        throw new AppError('AI returned empty or invalid analysis payload', 502)
+    }
+
     return {
         score: Number(analysis.score ?? 0),
         summary: analysis.summary ?? 'No summary generated.',
         issues: Array.isArray(analysis.issues) ? analysis.issues : []
+    }
+}
+
+const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
+    let timeoutId
+
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new AppError(timeoutMessage, 504))
+        }, timeoutMs)
+    })
+
+    try {
+        return await Promise.race([promise, timeoutPromise])
+    } finally {
+        clearTimeout(timeoutId)
     }
 }
 
@@ -56,22 +79,31 @@ export const analyzeDrawing = async ({ userId, drawingId }) => {
     })
 
     try {
-        const extractedText = await extractPdfText(drawing.filePath)
+        const drawingPath = drawing.fileUrl || drawing.filePath
+        if (!drawingPath) {
+            throw new AppError('Drawing file location is missing', 500)
+        }
+
+        const extractedText = await extractPdfText(drawingPath)
 
         if (!extractedText.trim()) {
             throw new AppError('No readable text found in PDF', 400)
         }
 
-        const aiResponse = await generateAIResponse({
-            systemPrompt: drawingReviewSystemPrompt,
-            userPrompt: `
+        const aiResponse = await withTimeout(
+            generateAIResponse({
+                systemPrompt: drawingReviewSystemPrompt,
+                userPrompt: `
 Drawing file name: ${drawing.fileName}
 
 Extracted PDF text:
 ${extractedText}
 `,
-            temperature: 0.2
-        })
+                temperature: 0.2
+            }),
+            AI_TIMEOUT_MS,
+            'AI analysis timed out. Please try again.'
+        )
 
         const parsed = safeJsonParse(aiResponse)
         const normalized = normalizeAnalysis(parsed)
@@ -81,8 +113,7 @@ ${extractedText}
                 drawingId: drawing.id,
                 score: normalized.score,
                 summary: normalized.summary,
-                issues: normalized.issues,
-                rawOutput: parsed
+                issues: normalized.issues
             }
         })
 

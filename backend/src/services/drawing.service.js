@@ -14,8 +14,8 @@ export const uploadProjectDrawing = async ({ userId, projectId, file }) => {
 
     const drawing = await prisma.drawing.create({
         data: {
-            fileName: file.originalName,
-            filePath: file.path,
+            fileName: file.originalname || file.filename,
+            fileUrl: file.path,
             mimeType: file.mimetype,
             size: file.size,
 

@@ -16,6 +16,18 @@ export const getUserProjects = async ({ userId }) => {
         where: {
             userId
         },
+        include: {
+            drawings: {
+                select: {
+                    id: true,
+                    analysis: {
+                        select: {
+                            id: true
+                        }
+                    }
+                }
+            }
+        },
         orderBy: {
             createdAt: 'desc'
         }

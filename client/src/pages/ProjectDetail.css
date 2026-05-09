@@ -1,0 +1,13 @@
+.project-detail { animation: fadeIn var(--duration-slow) var(--ease-default); }
+.project-detail-header { margin-bottom: var(--space-8); }
+.project-detail-breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); color: var(--neutral-400); margin-bottom: var(--space-4); }
+.project-detail-breadcrumb a { color: var(--neutral-400); transition: color var(--duration-fast); }
+.project-detail-breadcrumb a:hover { color: var(--neutral-700); }
+.project-detail-title { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.project-detail-title h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); }
+.project-detail-desc { font-size: var(--font-size-base); color: var(--neutral-400); margin-top: var(--space-2); max-width: 600px; line-height: var(--leading-relaxed); }
+.project-detail-section { margin-bottom: var(--space-8); }
+.project-detail-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+.project-detail-section-header h2 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); }
+.drawings-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.drawing-detail-panel { margin-top: var(--space-6); }

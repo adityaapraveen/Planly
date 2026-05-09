@@ -11,7 +11,7 @@ const providers = {
 const provider = providers[config.AI_PROVIDER]
 
 if (!provider) {
-    throw new ERROR(`Unsupported AI provider: ${config.AI_PROVIDER}`)
+    throw new Error(`Unsupported AI provider: ${config.AI_PROVIDER}`)
 }
 
 export const generateAIResponse =

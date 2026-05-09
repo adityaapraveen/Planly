@@ -1,0 +1,14 @@
+.settings-page { animation: fadeIn var(--duration-slow) var(--ease-default); max-width: 640px; }
+.settings-page h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); margin-bottom: var(--space-8); }
+.settings-card { background: var(--color-white); border: 1px solid var(--neutral-100); border-radius: var(--radius-lg); overflow: hidden; }
+.settings-card-header { padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--neutral-100); }
+.settings-card-header h2 { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); }
+.settings-card-header p { font-size: var(--font-size-sm); color: var(--neutral-400); margin-top: var(--space-1); }
+.settings-card-body { padding: var(--space-6); }
+.settings-field { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--neutral-50); }
+.settings-field:last-child { border-bottom: none; }
+.settings-field-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--neutral-500); }
+.settings-field-value { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); color: var(--neutral-900); }
+.settings-avatar { width: 64px; height: 64px; border-radius: var(--radius-full); background: var(--neutral-200); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--neutral-600); margin-bottom: var(--space-6); }
+.settings-danger { margin-top: var(--space-6); }
+.settings-danger .settings-card { border-color: var(--danger-50); }
