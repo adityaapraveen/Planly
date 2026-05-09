@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+
+  projects  Project[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  drawings    Drawing[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("projects")
+}
+
+model Drawing {
+  id        String   @id @default(uuid())
+  fileName  String
+  fileUrl   String
+  mimeType  String
+  size      Int
+  status    DrawingStatus @default(PENDING)
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  analysis  Analysis?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("drawings")
+}
+
+model Analysis {
+  id        String   @id @default(uuid())
+  score     Int
+  summary   String
+  issues    Json
+  reportUrl String?
+
+  drawingId String  @unique
+  drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("analyses")
+}
+
+enum DrawingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
