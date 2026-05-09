@@ -36,6 +36,11 @@ const envSchema = z.object({
 
     OPENROUTER_API_KEY: z.string().optional(),
     OPENROUTER_MODEL: z.string().optional(),
+
+    REDIS_HOST: z.string().default('localhost'),
+    REDIS_PORT: z.coerce.number().default(6379),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_URL: z.url()
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -49,7 +54,7 @@ if (!parsed.success) {
 export const config = {
     PORT: parsed.data.PORT,
     NODE_ENV: parsed.data.NODE_ENV,
-    
+
     CLIENT_URL: parsed.data.CLIENT_URL,
 
     DATABASE_URL: parsed.data.DATABASE_URL,
@@ -64,5 +69,11 @@ export const config = {
     OPENAI_MODEL: parsed.data.OPENAI_MODEL,
     OPENAI_API_KEY: parsed.data.OPENAI_API_KEY,
     OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
-    OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL
+    OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL,
+
+    REDIS_HOST: parsed.data.REDIS_HOST,
+    REDIS_URL: parsed.data.REDIS_URL,
+    REDIS_PASSWORD: parsed.data.REDIS_PASSWORD,
+    REDIS_PORT: parsed.data.REDIS_PORT
+
 }
