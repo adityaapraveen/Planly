@@ -8,6 +8,8 @@ import { healthRouter } from './routes/health.routes.js'
 import { notfound } from './middlewares/notFound.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 import { authRouter } from './routes/auth.routes.js'
+import { projectRouter } from './routes/project.routes.js'
+
 
 export const app = express()
 
@@ -30,6 +32,8 @@ if (config.NODE_ENV === 'dev') {
 
 app.use('/api/v1/health', healthRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/projects', projectRouter)
+
 
 app.use(notfound)
 app.use(errorHandler)
