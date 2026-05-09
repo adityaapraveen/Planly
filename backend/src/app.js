@@ -9,6 +9,7 @@ import { notfound } from './middlewares/notFound.js'
 import { errorHandler } from './middlewares/errorHandler.js'
 import { authRouter } from './routes/auth.routes.js'
 import { projectRouter } from './routes/project.routes.js'
+import { drawingRouter } from './routes/drawing.routes.js'
 
 
 export const app = express()
@@ -24,6 +25,11 @@ app.use(express.json({
     limit: '2mb'
 }))
 
+app.use(
+    '/uploads',
+    express.static('uploads')
+)
+
 app.use(cookieParser())
 
 if (config.NODE_ENV === 'dev') {
@@ -33,7 +39,7 @@ if (config.NODE_ENV === 'dev') {
 app.use('/api/v1/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/projects', projectRouter)
-
+app.use('/api/projects', drawingRouter)
 
 app.use(notfound)
 app.use(errorHandler)
