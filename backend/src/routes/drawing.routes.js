@@ -5,6 +5,7 @@ import { requireAuth } from '../middlewares/requireAuth.js'
 import { uploadDrawing } from '../middlewares/upload.middleware.js'
 
 import {
+    deleteProjectDrawingController,
     getProjectDrawingsController,
     uploadDrawingController
 } from '../controllers/drawing.controller.js'
@@ -23,3 +24,7 @@ drawingRouter
     )
 
     .get(getProjectDrawingsController)
+
+drawingRouter
+    .route('/:projectId/drawings/:drawingId')
+    .delete(deleteProjectDrawingController)

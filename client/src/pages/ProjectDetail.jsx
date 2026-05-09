@@ -4,7 +4,7 @@ import { ChevronRight, FileText, Upload } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useDrawings } from '../hooks/useDrawings'
 import { useAnalysis } from '../hooks/useAnalysis'
-import { uploadDrawing } from '../services/drawing.service'
+import { deleteDrawing, uploadDrawing } from '../services/drawing.service'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { PageLoader } from '../components/ui/Spinner'
@@ -46,12 +46,17 @@ export function ProjectDetail() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [selectedDrawing, setSelectedDrawing] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     if (!selectedDrawing) return
     const nextSelected = drawings.find((drawing) => drawing.id === selectedDrawing.id)
     if (nextSelected) {
       setSelectedDrawing(nextSelected)
+    } else {
+      setSelectedDrawing(null)
     }
   }, [drawings, selectedDrawing])
 
@@ -66,6 +71,21 @@ export function ProjectDetail() {
       setUploadError(err.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleDeleteDrawing = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await deleteDrawing(projectId, deleteTarget.id)
+      setDeleteTarget(null)
+      await refetchDrawings()
+    } catch (err) {
+      setDeleteError(err.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -114,6 +134,7 @@ export function ProjectDetail() {
                 key={d.id}
                 drawing={d}
                 onClick={() => setSelectedDrawing(selectedDrawing?.id === d.id ? null : d)}
+                onDelete={setDeleteTarget}
               />
             ))}
           </div>
@@ -127,6 +148,39 @@ export function ProjectDetail() {
       }>
         {uploadError && <div className="auth-error" style={{ marginBottom: 'var(--space-4)' }}>{uploadError}</div>}
         <FileUpload onFileSelect={handleFileSelect} uploading={uploading} />
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null)
+            setDeleteError('')
+          }
+        }}
+        title="Delete drawing"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDeleteTarget(null)
+                setDeleteError('')
+              }}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDeleteDrawing} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </>
+        }
+      >
+        {deleteError && <div className="auth-error" style={{ marginBottom: 'var(--space-4)' }}>{deleteError}</div>}
+        <p className="confirm-text">
+          Are you sure you want to delete <strong>{deleteTarget?.fileName}</strong>? This action cannot be undone.
+        </p>
       </Modal>
     </div>
   )

@@ -1,6 +1,6 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 
-import { getProjectDrawings, uploadProjectDrawing } from '../services/drawing.service.js'
+import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing } from '../services/drawing.service.js'
 
 export const uploadDrawingController = asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -37,5 +37,18 @@ export const getProjectDrawingsController = asyncHandler(async (req, res) => {
         data: {
             drawings
         }
+    })
+})
+
+export const deleteProjectDrawingController = asyncHandler(async (req, res) => {
+    await deleteProjectDrawing({
+        userId: req.user.id,
+        projectId: req.params.projectId,
+        drawingId: req.params.drawingId
+    })
+
+    res.status(200).json({
+        success: true,
+        message: 'Drawing deleted successfully'
     })
 })

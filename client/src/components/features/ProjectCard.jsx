@@ -5,6 +5,7 @@ import './ProjectCard.css'
 
 export function ProjectCard({ project, onEdit, onDelete }) {
   const navigate = useNavigate()
+  const showActions = typeof onEdit === 'function' || typeof onDelete === 'function'
 
   const handleClick = () => {
     navigate(`/projects/${project.id}`)
@@ -16,22 +17,36 @@ export function ProjectCard({ project, onEdit, onDelete }) {
         <div className="project-card-icon">
           <FolderKanban size={18} />
         </div>
-        <div className="project-card-actions" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="project-card-action-btn"
-            onClick={() => onEdit(project)}
-            aria-label="Edit project"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            className="project-card-action-btn danger"
-            onClick={() => onDelete(project)}
-            aria-label="Delete project"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+        {showActions && (
+          <div className="project-card-actions" onClick={(e) => e.stopPropagation()}>
+            {typeof onEdit === 'function' && (
+              <button
+                type="button"
+                className="project-card-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(project)
+                }}
+                aria-label="Edit project"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            {typeof onDelete === 'function' && (
+              <button
+                type="button"
+                className="project-card-action-btn danger"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(project)
+                }}
+                aria-label="Delete project"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <h3 className="project-card-name">{project.name}</h3>
       {project.description && (

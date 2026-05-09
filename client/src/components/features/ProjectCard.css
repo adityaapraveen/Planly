@@ -38,7 +38,7 @@
 .project-card-actions {
   display: flex;
   gap: var(--space-1);
-  opacity: 0;
+  opacity: 0.9;
   transition: opacity var(--duration-fast) var(--ease-default);
 }
 
@@ -52,6 +52,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: transparent;
   border-radius: var(--radius-md);
   color: var(--neutral-400);
   transition: all var(--duration-fast) var(--ease-default);

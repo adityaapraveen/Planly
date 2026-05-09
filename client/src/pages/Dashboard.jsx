@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FolderKanban, FileText, Sparkles } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useProjects } from '../hooks/useProjects'
@@ -10,6 +11,7 @@ import { ProjectCard } from '../components/features/ProjectCard'
 import './Dashboard.css'
 
 export function Dashboard() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { projects, loading, error, refetch } = useProjects()
   const totalDrawings = projects.reduce((sum, project) => sum + (project.drawings?.length || 0), 0)
@@ -70,7 +72,12 @@ export function Dashboard() {
         ) : (
           <div className="dashboard-projects-grid">
             {projects.slice(0, 4).map((p) => (
-              <ProjectCard key={p.id} project={p} onEdit={() => {}} onDelete={() => {}} />
+              <ProjectCard
+                key={p.id}
+                project={p}
+                onEdit={() => navigate('/projects')}
+                onDelete={() => navigate('/projects')}
+              />
             ))}
           </div>
         )}

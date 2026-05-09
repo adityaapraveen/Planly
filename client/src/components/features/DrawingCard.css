@@ -56,3 +56,22 @@
   gap: var(--space-3);
   flex-shrink: 0;
 }
+
+.drawing-card-delete {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--neutral-400);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-default);
+}
+
+.drawing-card-delete:hover {
+  background: var(--danger-50);
+  color: var(--danger-600);
+}

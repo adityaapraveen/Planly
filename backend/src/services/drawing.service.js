@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
+import fs from 'fs/promises'
 
 export const uploadProjectDrawing = async ({ userId, projectId, file }) => {
     const project = await prisma.project.findFirst({
@@ -48,4 +49,32 @@ export const getProjectDrawings = async ({ userId, projectId }) => {
             createdAt: 'desc'
         }
     })
+}
+
+export const deleteProjectDrawing = async ({ userId, projectId, drawingId }) => {
+    const drawing = await prisma.drawing.findFirst({
+        where: {
+            id: drawingId,
+            projectId,
+            project: {
+                userId
+            }
+        }
+    })
+
+    if (!drawing) {
+        throw new AppError('Drawing not found', 404)
+    }
+
+    await prisma.drawing.delete({
+        where: {
+            id: drawingId
+        }
+    })
+
+    if (drawing.fileUrl) {
+        await fs.unlink(drawing.fileUrl).catch(() => null)
+    }
+
+    return null
 }

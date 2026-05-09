@@ -13,3 +13,9 @@ export async function uploadDrawing(projectId, file) {
     body: formData,
   })
 }
+
+export async function deleteDrawing(projectId, drawingId) {
+  return apiFetch(`/api/projects/${projectId}/drawings/${drawingId}`, {
+    method: 'DELETE',
+  })
+}
