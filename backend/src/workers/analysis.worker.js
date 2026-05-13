@@ -28,16 +28,24 @@ analysisWorker.on('failed', async (job, error) => {
     const drawingId = job?.data?.drawingId
 
     if (drawingId) {
-        await prisma.drawing.update({
-            where: {
-                id: drawingId
-            },
-            data: {
-                status: 'FAILED'
+        try {
+            await prisma.drawing.update({
+                where: {
+                    id: drawingId
+                },
+                data: {
+                    status: 'FAILED'
+                }
+            })
+        } catch (updateError) {
+            // The drawing can be deleted while a queued job is still pending.
+            if (updateError?.code === 'P2025') {
+                console.warn(`Skipping FAILED status update; drawing ${drawingId} no longer exists`)
+                return
             }
 
-        })
+            throw updateError
+        }
     }
 })
-
 

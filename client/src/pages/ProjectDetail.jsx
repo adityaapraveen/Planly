@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, FileText, Upload } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useDrawings } from '../hooks/useDrawings'
-import { useAnalysis } from '../hooks/useAnalysis'
 import { deleteDrawing, uploadDrawing } from '../services/drawing.service'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -11,54 +10,20 @@ import { PageLoader } from '../components/ui/Spinner'
 import { ErrorState } from '../components/ui/ErrorState'
 import { EmptyState } from '../components/ui/EmptyState'
 import { DrawingCard } from '../components/features/DrawingCard'
-import { AnalysisPanel } from '../components/features/AnalysisPanel'
 import { FileUpload } from '../components/features/FileUpload'
 import './ProjectDetail.css'
 
-function DrawingAnalysisView({ drawing, onAnalysisDone }) {
-  const { analysis, loading, error, triggerAnalysis, fetchAnalysis } = useAnalysis(drawing?.id)
-
-  // Auto-fetch only when analysis is expected to exist
-  useEffect(() => {
-    if (drawing?.id && drawing?.status === 'COMPLETED') {
-      fetchAnalysis()
-    }
-  }, [drawing?.id, drawing?.status, fetchAnalysis])
-
-  const handleAnalyze = async () => {
-    const result = await triggerAnalysis()
-    await onAnalysisDone?.()
-    return result
-  }
-
-  return (
-    <div className="drawing-detail-panel">
-      <AnalysisPanel analysis={analysis} loading={loading} error={error} onAnalyze={handleAnalyze} />
-    </div>
-  )
-}
-
 export function ProjectDetail() {
+  const navigate = useNavigate()
   const { projectId } = useParams()
   const { project, loading: projectLoading, error: projectError } = useProject(projectId)
   const { drawings, loading: drawingsLoading, error: drawingsError, refetch: refetchDrawings } = useDrawings(projectId)
   const [showUpload, setShowUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [selectedDrawing, setSelectedDrawing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
-
-  useEffect(() => {
-    if (!selectedDrawing) return
-    const nextSelected = drawings.find((drawing) => drawing.id === selectedDrawing.id)
-    if (nextSelected) {
-      setSelectedDrawing(nextSelected)
-    } else {
-      setSelectedDrawing(null)
-    }
-  }, [drawings, selectedDrawing])
 
   const handleFileSelect = async (file) => {
     setUploading(true)
@@ -133,15 +98,13 @@ export function ProjectDetail() {
               <DrawingCard
                 key={d.id}
                 drawing={d}
-                onClick={() => setSelectedDrawing(selectedDrawing?.id === d.id ? null : d)}
+                onClick={() => navigate(`/drawings/${d.id}/report`)}
                 onDelete={setDeleteTarget}
               />
             ))}
           </div>
         )}
       </div>
-
-      {selectedDrawing && <DrawingAnalysisView drawing={selectedDrawing} onAnalysisDone={refetchDrawings} />}
 
       <Modal isOpen={showUpload} onClose={() => setShowUpload(false)} title="Upload drawing" footer={
         uploading ? <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-400)' }}>Uploading…</span> : null

@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { setAccessToken, clearAccessToken } from '../services/api'
 import {
   loginUser as loginService,
@@ -6,8 +6,7 @@ import {
   logoutUser as logoutService,
   refreshAccessToken,
 } from '../services/auth.service'
-
-export const AuthContext = createContext(null)
+import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)

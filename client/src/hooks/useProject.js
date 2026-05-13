@@ -22,7 +22,7 @@ export function useProject(projectId) {
   }, [projectId])
 
   useEffect(() => {
-    fetchProject()
+    Promise.resolve().then(fetchProject)
   }, [fetchProject])
 
   return { project, loading, error, refetch: fetchProject }

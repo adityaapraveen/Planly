@@ -20,7 +20,7 @@ export function useProjects() {
   }, [])
 
   useEffect(() => {
-    fetchProjects()
+    Promise.resolve().then(fetchProjects)
   }, [fetchProjects])
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 
-import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing } from '../services/drawing.service.js'
+import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing, getDrawingReport } from '../services/drawing.service.js'
 
 import { addAnalysisJob } from '../queues/analysis.queue.js'
 
@@ -57,5 +57,19 @@ export const deleteProjectDrawingController = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Drawing deleted successfully'
+    })
+})
+
+export const getDrawingReportController = asyncHandler(async (req, res) => {
+    const drawing = await getDrawingReport({
+        userId: req.user.id,
+        drawingId: req.params.drawingId
+    })
+
+    res.status(200).json({
+        success: true,
+        data: {
+            drawing
+        }
     })
 })

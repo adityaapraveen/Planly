@@ -12,6 +12,9 @@ export const requireAuth = async (req, res, next) => {
 
         const token = authHeader.slice(7).trim()
         const decoded = verifyAccessToken(token)
+        if (!decoded?.userId || typeof decoded.userId !== 'string') {
+            throw new AppError('Invalid or expired token', 401)
+        }
 
         const user = await prisma.user.findUnique({
             where: {

@@ -8,13 +8,13 @@ import {
 import { refreshCookieOptions } from '../utils/cookies.js'
 
 const registerSchema = z.object({
-    name: z.string().min(2),
-    email: z.email(),
+    name: z.string().trim().min(2),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(8)
 })
 
 const loginSchema = z.object({
-    email: z.email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(8)
 })
 

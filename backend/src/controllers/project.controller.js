@@ -1,4 +1,4 @@
-import { success, z } from 'zod'
+import { z } from 'zod'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 
 import {
@@ -51,7 +51,7 @@ export const getProjectsController = asyncHandler(async (req, res) => {
 })
 
 export const getProjectController = asyncHandler(async (req, res) => {
-    const projects = await getProjectById({
+    const project = await getProjectById({
         userId: req.user.id,
         projectId: req.params.projectId
     })
@@ -59,7 +59,7 @@ export const getProjectController = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: {
-            projects
+            project
         }
     })
 })

@@ -1,67 +1,130 @@
-import fs from 'fs'
-import { PDFParse } from 'pdf-parse'
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
-import { generateAIResponse } from './ai/ai.service.js'
-import { drawingReviewSystemPrompt } from '../prompts/drawingReview.prompt.js'
+import { renderPdfPages } from './pdf-render.service.js'
+import { generateVisionResponse } from './ai/ai.service.js'
+import { pageVisionReviewSystemPrompt } from '../prompts/pageVisionReview.prompt.js'
 
-const AI_TIMEOUT_MS = 60_000
+const clamp01 = (value) => {
+    const number = Number(value)
 
-const extractPdfText = async (filePath) => {
-    const buffer = fs.readFileSync(filePath)
-    const parser = new PDFParse({ data: buffer })
-    const data = await parser.getText()
-    await parser.destroy()
+    if (Number.isNaN(number)) return 0
 
-    return data.text
+    return Math.max(0, Math.min(1, number))
+}
+
+const normalizeIssue = (issue, pageNumber) => {
+    const location = issue.location || {}
+    const normalizedLocation = {
+        x: clamp01(location.x),
+        y: clamp01(location.y),
+        width: clamp01(location.width),
+        height: clamp01(location.height)
+    }
+    const hasLocation = normalizedLocation.width > 0 && normalizedLocation.height > 0
+    const severity = String(issue.severity || 'Medium').trim()
+    const normalizedSeverity = ['High', 'Medium', 'Low'].find(
+        (level) => level.toLowerCase() === severity.toLowerCase()
+    ) || 'Medium'
+
+    return {
+        id: issue.id || undefined,
+        title: issue.title || 'Untitled issue',
+        category: issue.category || 'Drawing Quality',
+        severity: normalizedSeverity,
+        confidence: clamp01(issue.confidence ?? 0.5),
+        page: Number(issue.page || pageNumber),
+        location: normalizedLocation,
+        hasLocation,
+        explanation: issue.explanation || '',
+        recommendation: issue.recommendation || ''
+    }
+}
+
+const calculateOverallScore = (issues) => {
+    let score = 100
+
+    for (const issue of issues) {
+        if (issue.severity === 'High') score -= 20
+        if (issue.severity === 'Medium') score -= 10
+        if (issue.severity === 'Low') score -= 5
+    }
+
+    return Math.max(0, score)
+}
+
+const analyzeSinglePage = async ({ drawing, page }) => {
+    const aiResponse = await generateVisionResponse({
+        systemPrompt: pageVisionReviewSystemPrompt,
+        userPrompt: `
+Analyze page ${page.pageNumber} of this architectural drawing.
+
+Drawing file name: ${drawing.fileName}
+
+Important:
+- Focus only on this page.
+- Give pinpoint coordinates using normalized values from 0 to 1.
+- Do not return generic issues.
+- If an issue is visible in the title block, dimension line, room label, legend, schedule, or drawing region, provide an approximate bounding box.
+`,
+        imagePaths: [page.imagePath],
+        temperature: 0.1
+    })
+
+    const parsed = safeJsonParse(aiResponse)
+
+    const issues = Array.isArray(parsed.issues)
+        ? parsed.issues.map((issue) => normalizeIssue(issue, page.pageNumber))
+        : []
+
+    return {
+        pageNumber: page.pageNumber,
+        score: Number(parsed.score ?? 0),
+        summary: parsed.summary || '',
+        issues
+    }
 }
 
 const safeJsonParse = (value) => {
+    if (value && typeof value === 'object') {
+        return value
+    }
+
+    const raw = String(value || '').trim()
+
     try {
-        return JSON.parse(value)
+        return JSON.parse(raw)
     } catch {
-        throw new AppError('AI returned invalid JSON', 502)
+        const start = raw.indexOf('{')
+        const end = raw.lastIndexOf('}')
+
+        if (start >= 0 && end > start) {
+            const sliced = raw.slice(start, end + 1)
+            try {
+                return JSON.parse(sliced)
+            } catch {
+                // fall through
+            }
+        }
+
+        return {
+            score: 0,
+            summary: 'AI response could not be parsed into structured JSON.',
+            issues: []
+        }
     }
 }
 
-const normalizeAnalysis = (analysis) => {
-    if (!analysis || typeof analysis !== 'object') {
-        throw new AppError('AI returned empty or invalid analysis payload', 502)
-    }
-
-    return {
-        score: Number(analysis.score ?? 0),
-        summary: analysis.summary ?? 'No summary generated.',
-        issues: Array.isArray(analysis.issues) ? analysis.issues : []
-    }
-}
-
-const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
-    let timeoutId
-
-    const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-            reject(new AppError(timeoutMessage, 504))
-        }, timeoutMs)
-    })
-
-    try {
-        return await Promise.race([promise, timeoutPromise])
-    } finally {
-        clearTimeout(timeoutId)
-    }
-}
-
-export const analyzeDrawing = async ({ userId, drawingId }) => {
+export const analyzeDrawing = async ({
+    userId,
+    drawingId,
+    reviewMode = 'SUBMISSION_READINESS'
+}) => {
     const drawing = await prisma.drawing.findFirst({
         where: {
             id: drawingId,
             project: {
                 userId
             }
-        },
-        include: {
-            analysis: true
         }
     })
 
@@ -69,8 +132,17 @@ export const analyzeDrawing = async ({ userId, drawingId }) => {
         throw new AppError('Drawing not found', 404)
     }
 
-    if (drawing.analysis) {
-        return drawing.analysis
+    const existingAnalysis = await prisma.analysis.findUnique({
+        where: {
+            drawingId_reviewMode: {
+                drawingId,
+                reviewMode
+            }
+        }
+    })
+
+    if (existingAnalysis) {
+        return existingAnalysis
     }
 
     await prisma.drawing.update({
@@ -78,42 +150,51 @@ export const analyzeDrawing = async ({ userId, drawingId }) => {
         data: { status: 'PROCESSING' }
     })
 
+    const startedAt = Date.now()
+
     try {
-        const drawingPath = drawing.fileUrl || drawing.filePath
-        if (!drawingPath) {
-            throw new AppError('Drawing file location is missing', 500)
+        const pages = await renderPdfPages({
+            drawingId: drawing.id,
+            pdfPath: drawing.filePath
+        })
+
+        if (!pages.length) {
+            throw new AppError('Could not render PDF pages', 500)
         }
 
-        const extractedText = await extractPdfText(drawingPath)
+        const pageResults = []
 
-        if (!extractedText.trim()) {
-            throw new AppError('No readable text found in PDF', 400)
+        for (const page of pages) {
+            const pageResult = await analyzeSinglePage({
+                drawing,
+                page
+            })
+
+            pageResults.push(pageResult)
         }
 
-        const aiResponse = await withTimeout(
-            generateAIResponse({
-                systemPrompt: drawingReviewSystemPrompt,
-                userPrompt: `
-Drawing file name: ${drawing.fileName}
+        const allIssues = pageResults.flatMap((page) => page.issues)
 
-Extracted PDF text:
-${extractedText}
-`,
-                temperature: 0.2
-            }),
-            AI_TIMEOUT_MS,
-            'AI analysis timed out. Please try again.'
-        )
+        const score = calculateOverallScore(allIssues)
 
-        const parsed = safeJsonParse(aiResponse)
-        const normalized = normalizeAnalysis(parsed)
+        const summary =
+            allIssues.length === 0
+                ? 'No major drawing issues were identified in the reviewed pages.'
+                : `The review found ${allIssues.length} issue(s) across ${pageResults.length} page(s), with focus areas in documentation quality, drawing readability, and coordination readiness.`
 
         const analysis = await prisma.analysis.create({
             data: {
                 drawingId: drawing.id,
-                score: normalized.score,
-                summary: normalized.summary,
-                issues: normalized.issues
+                score,
+                summary,
+                issues: allIssues,
+                reviewMode,
+                rawOutput: {
+                    pageResults,
+                    reviewMode,
+                    analysisMode: 'page-by-page-vision',
+                    durationMs: Date.now() - startedAt
+                }
             }
         })
 
@@ -133,16 +214,17 @@ ${extractedText}
     }
 }
 
-export const getDrawingAnalysis = async ({ userId, drawingId }) => {
+export const getDrawingAnalysis = async ({
+    userId,
+    drawingId,
+    reviewMode = 'SUBMISSION_READINESS'
+}) => {
     const drawing = await prisma.drawing.findFirst({
         where: {
             id: drawingId,
             project: {
                 userId
             }
-        },
-        include: {
-            analysis: true
         }
     })
 
@@ -150,9 +232,18 @@ export const getDrawingAnalysis = async ({ userId, drawingId }) => {
         throw new AppError('Drawing not found', 404)
     }
 
-    if (!drawing.analysis) {
-        throw new AppError('Analysis not found for this drawing', 404)
+    const analysis = await prisma.analysis.findUnique({
+        where: {
+            drawingId_reviewMode: {
+                drawingId,
+                reviewMode
+            }
+        }
+    })
+
+    if (!analysis) {
+        throw new AppError('Analysis not found for this review mode', 404)
     }
 
-    return drawing.analysis
+    return analysis
 }

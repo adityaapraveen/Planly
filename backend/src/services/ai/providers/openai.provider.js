@@ -1,3 +1,5 @@
+import fs from 'fs/promises'
+import path from 'path'
 import OpenAI from 'openai'
 
 import { config } from '../../../config/config.js'
@@ -5,6 +7,13 @@ import { config } from '../../../config/config.js'
 const client = new OpenAI({
     apiKey: config.OPENAI_API_KEY
 })
+
+const imageToBase64 = async (imagePath) => {
+    const buffer = await fs.readFile(imagePath)
+    const ext = path.extname(imagePath).replace('.', '') || 'png'
+
+    return `data:image/${ext};base64,${buffer.toString('base64')}`
+}
 
 export const openaiProvider = {
     generateText: async ({
@@ -14,13 +23,10 @@ export const openaiProvider = {
     }) => {
         const response = await client.chat.completions.create({
             model: config.OPENAI_MODEL,
-
             temperature,
-
             response_format: {
                 type: 'json_object'
             },
-
             messages: [
                 {
                     role: 'system',
@@ -29,9 +35,52 @@ export const openaiProvider = {
                 {
                     role: 'user',
                     content: userPrompt
-                },
+                }
             ]
         })
+
+        return response.choices[0].message.content
+    },
+
+    generateVision: async ({
+        systemPrompt,
+        userPrompt,
+        imagePaths,
+        temperature = 0.2
+    }) => {
+        const imageInputs = await Promise.all(
+            imagePaths.map(async (imagePath) => ({
+                type: 'image_url',
+                image_url: {
+                    url: await imageToBase64(imagePath)
+                }
+            }))
+        )
+
+        const response = await client.chat.completions.create({
+            model: config.OPENAI_MODEL,
+            temperature,
+            response_format: {
+                type: 'json_object'
+            },
+            messages: [
+                {
+                    role: 'system',
+                    content: systemPrompt
+                },
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: userPrompt
+                        },
+                        ...imageInputs
+                    ]
+                }
+            ]
+        })
+
         return response.choices[0].message.content
     }
 }

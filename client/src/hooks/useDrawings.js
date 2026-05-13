@@ -21,7 +21,7 @@ export function useDrawings(projectId) {
   }, [projectId])
 
   useEffect(() => {
-    fetchDrawings()
+    Promise.resolve().then(fetchDrawings)
   }, [fetchDrawings])
 
   return { drawings, loading, error, refetch: fetchDrawings }

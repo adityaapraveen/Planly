@@ -12,7 +12,7 @@ export const createProject = async ({ userId, name, description }) => {
 }
 
 export const getUserProjects = async ({ userId }) => {
-    return prisma.project.findMany({
+    const projects = await prisma.project.findMany({
         where: {
             userId
         },
@@ -20,7 +20,11 @@ export const getUserProjects = async ({ userId }) => {
             drawings: {
                 select: {
                     id: true,
-                    analysis: {
+                    analyses: {
+                        where: {
+                            reviewMode: 'SUBMISSION_READINESS'
+                        },
+                        take: 1,
                         select: {
                             id: true
                         }
@@ -32,6 +36,14 @@ export const getUserProjects = async ({ userId }) => {
             createdAt: 'desc'
         }
     })
+
+    return projects.map((project) => ({
+        ...project,
+        drawings: project.drawings.map((drawing) => ({
+            id: drawing.id,
+            analysis: drawing.analyses?.[0] || null
+        }))
+    }))
 }
 
 export const getProjectById = async ({ userId, projectId }) => {

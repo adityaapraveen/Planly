@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -8,47 +8,51 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
 
-  projects  Project[]
+  projects Project[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
 model Project {
-  id          String    @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
 
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  drawings    Drawing[]
+  drawings Drawing[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("projects")
 }
 
 model Drawing {
-  id        String   @id @default(uuid())
-  fileName  String
-  fileUrl   String
-  mimeType  String
-  size      Int
-  status    DrawingStatus @default(PENDING)
+  id String @id @default(uuid())
+
+  fileName String
+  filePath String @map("fileUrl")
+  mimeType String
+  size     Int
+
+  status DrawingStatus @default(PENDING)
 
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  analysis  Analysis?
+  pages DrawingPage[]
+
+  analyses Analysis[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,20 +60,48 @@ model Drawing {
   @@map("drawings")
 }
 
+model DrawingPage {
+  id String @id @default(uuid())
+
+  pageNumber Int
+
+  imagePath String
+  imageName String
+
+  drawingId String
+  drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("drawing_pages")
+}
+
 model Analysis {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   score     Int
   summary   String
   issues    Json
+  rawOutput Json?
   reportUrl String?
 
-  drawingId String  @unique
+  reviewMode ReviewMode @default(SUBMISSION_READINESS)
+
+  drawingId String
   drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([drawingId, reviewMode])
   @@map("analyses")
+}
+
+enum ReviewMode {
+  SUBMISSION_READINESS
+  DOCUMENTATION_REVIEW
+  CONSTRUCTABILITY_REVIEW
+  COORDINATION_REVIEW
+  COMPLIANCE_RISK_REVIEW
 }
 
 enum DrawingStatus {

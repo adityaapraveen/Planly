@@ -25,6 +25,10 @@ const buildAuthTokens = (user) => {
 }
 
 export const registerUser = async ({ name, email, password }) => {
+    if (!email || typeof email !== 'string') {
+        throw new AppError('Valid email is required', 400)
+    }
+
     const existingUser = await prisma.user.findUnique({
         where: { email }
     })
@@ -52,6 +56,14 @@ export const registerUser = async ({ name, email, password }) => {
 }
 
 export const loginUser = async ({ email, password }) => {
+    if (!email || typeof email !== 'string') {
+        throw new AppError('Valid email is required', 400)
+    }
+
+    if (!password || typeof password !== 'string') {
+        throw new AppError('Password is required', 400)
+    }
+
     const user = await prisma.user.findUnique({
         where: { email }
     })
@@ -80,6 +92,9 @@ export const refreshAccessToken = async (refreshToken) => {
     }
 
     const decoded = verifyRefreshToken(refreshToken)
+    if (!decoded?.userId || typeof decoded.userId !== 'string') {
+        throw new AppError('Invalid refresh token', 401)
+    }
 
     const user = await prisma.user.findUnique({
         where: { id: decoded.userId }
