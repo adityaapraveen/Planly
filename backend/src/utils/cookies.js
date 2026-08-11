@@ -14,3 +14,9 @@ export const refreshCookieOptions = {
         60 *
         1000
 }
+
+export const refreshCookieClearOptions = {
+    httpOnly: refreshCookieOptions.httpOnly,
+    secure: refreshCookieOptions.secure,
+    sameSite: refreshCookieOptions.sameSite
+}

@@ -1,268 +1,274 @@
 # Planly
 
-![JavaScript](https://img.shields.io/badge/JavaScript-73.2%25-yellow?style=flat-square)
-![CSS](https://img.shields.io/badge/CSS-26.2%25-blue?style=flat-square)
-![Node.js](https://img.shields.io/badge/Node.js-Backend-green?style=flat-square)
-![React](https://img.shields.io/badge/React-Frontend-blue?style=flat-square)
+Planly is an AI-assisted architectural drawing review workspace. It accepts PDF drawing sets, renders individual sheets, runs evidence-oriented review modes, places findings on the drawing, and lets a human reviewer acknowledge, resolve, or dismiss each finding.
 
-**Planly** is an AI-powered platform for analyzing construction and architectural drawings. It helps professionals review technical drawings with comprehensive analysis across multiple review modes, leveraging AI to identify issues, provide scores, and generate detailed reports.
+The long-term product direction is **Architectural Intelligence**: a project-aware system that understands drawing sets, specifications, revisions, decisions, and downstream construction outcomes—not merely a chatbot attached to PDFs.
 
----
+> Planly supports professional review; it does not replace an architect, engineer, code consultant, or authority having jurisdiction. AI findings must be verified by a qualified person.
 
-## 🎯 Features
+## Current capabilities
 
-- **User Authentication**: Secure sign-up and login with JWT-based authentication
-- **Project Management**: Organize drawings into projects with descriptions
-- **Drawing Upload**: Upload PDF and image files for analysis
-- **Multi-Mode Analysis**: Review drawings across 5 specialized review modes:
-  - Submission Readiness
-  - Documentation Review
-  - Constructability Review
-  - Coordination Review
-  - Compliance Risk Review
-- **AI-Powered Insights**: Automatic analysis with scoring and issue detection
-- **Page Extraction**: Convert multi-page PDFs into individual images for detailed analysis
-- **Report Generation**: Generate comprehensive analysis reports with summaries and actionable issues
-- **Job Queue**: Background processing with BullMQ for handling large files efficiently
+- Email/password authentication with short-lived access tokens.
+- Hashed, rotating, server-revocable refresh sessions.
+- Project and drawing management.
+- PDF signature validation and a 20 MB upload limit.
+- Page-by-page drawing rendering and vision analysis.
+- Five review modes:
+  - Submission readiness
+  - Documentation review
+  - Constructability review
+  - Coordination review
+  - Compliance-risk review
+- Strict validation of structured AI responses.
+- Evidence locations rendered as drawing overlays.
+- Versioned analysis runs with provider, model, prompt, duration, attempt, and error metadata.
+- Relational findings with open, acknowledged, resolved, and dismissed states.
+- PostgreSQL-backed recovery of interrupted runs without BullMQ or Redis.
+- In-process concurrency control for a single API instance.
+- Expiring signed URLs for private PDFs and rendered pages.
+- API, authentication, upload, daily-analysis, and analysis-trigger limits.
+- Request IDs and structured error logs.
 
----
+The researched product strategy and implementation backlog live in [Architectural Intelligence Product Brief](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md).
 
-## 📋 Tech Stack
+## Technology
 
-### Frontend
-- **Framework**: React 19 with Vite
-- **Routing**: React Router DOM v7
-- **Icons**: Lucide React
-- **Build Tool**: Vite for fast development and optimized builds
+| Layer | Technology |
+| --- | --- |
+| Web client | React 19, React Router, Vite |
+| API | Node.js, Express 5 |
+| Database | PostgreSQL, Prisma |
+| Authentication | JWT access tokens, rotating refresh sessions, bcrypt |
+| AI | OpenAI-compatible providers: OpenAI or OpenRouter |
+| PDF processing | pdf2pic with `pdftoppm` fallback |
+| Validation | Zod |
+| Tests | Node.js test runner, ESLint, Vite production build |
 
-### Backend
-- **Runtime**: Node.js with Express.js v5
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT (jsonwebtoken) & Bcrypt
-- **Job Queue**: BullMQ with Redis for background processing
-- **File Processing**:
-  - PDF handling with `pdf-parse` and `pdf2pic`
-  - Multer for file uploads
-- **AI Integration**: OpenAI API for drawing analysis
-- **Security**: Helmet for HTTP headers, CORS enabled
-- **Validation**: Zod for schema validation
+## Architecture
 
-### Infrastructure
-- Database: PostgreSQL
-- Cache/Queue: Redis via IORedis
-- ORM: Prisma Client v7 with PostgreSQL Adapter
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 16+
-- PostgreSQL 12+
-- Redis 6+
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/adityaapraveen/Planly.git
-   cd Planly
-   ```
-
-2. **Setup Backend**
-   ```bash
-   cd backend
-   npm install
-   ```
-   
-   Create a `.env` file with your configuration:
-   ```
-   DATABASE_URL=postgresql://user:password@localhost:5432/planly
-   REDIS_URL=redis://localhost:6379
-   JWT_SECRET=your_jwt_secret
-   OPENAI_API_KEY=your_openai_key
-   ```
-
-3. **Setup Database**
-   ```bash
-   npm run prisma:migrate
-   npm run prisma:generate
-   ```
-
-4. **Setup Frontend**
-   ```bash
-   cd ../client
-   npm install
-   ```
-
-### Development
-
-**Backend**
-```bash
-cd backend
-npm run dev           # Start development server
-npm run dev:worker   # Start background worker in another terminal
+```mermaid
+flowchart LR
+    UI[React client] -->|Authenticated API| API[Express API]
+    API --> DB[(PostgreSQL)]
+    API --> STORAGE[Private local storage]
+    API --> RUNS[Analysis runner]
+    RUNS --> RENDER[PDF page renderer]
+    RENDER --> AI[Vision provider]
+    AI --> VALIDATE[Schema validation]
+    VALIDATE --> DB
+    API -->|Expiring signed URL| ASSET[Protected asset endpoint]
+    ASSET --> STORAGE
 ```
 
-**Frontend**
+Analysis runs are persisted before execution. The API process recovers `PENDING` and `PROCESSING` runs after restart and processes at most two concurrently. This is appropriate for a single-instance deployment. Multi-instance production deployment should use distributed run claiming or a managed durable job system.
+
+## Repository structure
+
+```text
+Planly/
+├── backend/
+│   ├── prisma/                 Database schema and migrations
+│   ├── src/
+│   │   ├── config/             Environment and database configuration
+│   │   ├── controllers/        HTTP request handling
+│   │   ├── middlewares/        Authentication, uploads, limits, errors
+│   │   ├── prompts/            Versioned review instructions
+│   │   ├── routes/             Express routes
+│   │   ├── services/           Domain, AI, storage, and analysis logic
+│   │   └── utils/              Tokens, cookies, signed assets, errors
+│   ├── test/                   Backend tests
+│   └── uploads/                Local development assets; not source data
+├── client/
+│   └── src/
+│       ├── api/                Feature API calls
+│       ├── components/         UI and drawing-review components
+│       ├── context/            Authentication state
+│       ├── hooks/              Reusable client behavior
+│       ├── pages/              Routed screens
+│       └── services/           HTTP and application services
+└── docs/                       Product and engineering context
+```
+
+## Prerequisites
+
+- Node.js 20.19 or newer; Node.js 22 LTS is recommended.
+- npm.
+- PostgreSQL.
+- Poppler (`pdftoppm`) or GraphicsMagick/ImageMagick for PDF rendering.
+- An OpenAI or OpenRouter API key.
+
+On Ubuntu/Debian, the PDF fallback can be installed with:
+
+```bash
+sudo apt-get install poppler-utils
+```
+
+## Local setup
+
+### 1. Clone and install dependencies
+
+```bash
+git clone https://github.com/adityaapraveen/Planly.git
+cd Planly
+
+cd backend
+npm install
+
+cd ../client
+npm install
+```
+
+### 2. Configure the backend
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Fill in the PostgreSQL URL, JWT secrets, provider, model, and matching provider API key.
+
+Generate the Prisma client and apply migrations:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+
+For development migrations, use `npm run prisma:migrate` instead of `migrate deploy`.
+
+### 3. Configure the client
+
+```bash
+cd ../client
+cp .env.example .env
+```
+
+### 4. Start the applications
+
+Backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+Client, in a second terminal:
+
 ```bash
 cd client
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`
-The backend API will be available at `http://localhost:3000`
+Open `http://localhost:5173`.
 
-### Production Build
+## Environment variables
 
-**Backend**
-```bash
-npm start
-npm run worker
+Backend variables are documented in [backend/.env.example](backend/.env.example).
+
+Important operational settings:
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `AI_REQUEST_TIMEOUT_MS` | Per-provider request timeout | `120000` |
+| `AI_MAX_RETRIES` | Provider SDK retries | `0` |
+| `AI_PROMPT_VERSION` | Stored with each analysis run | `v1` |
+| `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
+| `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |
+
+## API overview
+
+All project and analysis routes require a bearer access token unless noted.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | Create an account and refresh session |
+| `POST` | `/api/auth/login` | Sign in |
+| `POST` | `/api/auth/refresh` | Rotate the refresh session |
+| `POST` | `/api/auth/logout` | Revoke the current refresh session |
+| `GET` | `/api/auth/me` | Return the current user |
+| `GET/POST` | `/api/projects` | List or create projects |
+| `GET/PATCH/DELETE` | `/api/projects/:projectId` | Manage a project |
+| `GET/POST` | `/api/projects/:projectId/drawings` | List or upload drawings |
+| `DELETE` | `/api/projects/:projectId/drawings/:drawingId` | Delete a drawing and its assets |
+| `POST` | `/api/drawings/:drawingId/analyze` | Start or rerun a review mode |
+| `GET` | `/api/drawings/:drawingId/analysis` | Get the latest run for a mode |
+| `GET` | `/api/drawings/:drawingId/report` | Get drawing, pages, and signed URLs |
+| `PATCH` | `/api/analysis/issues/:issueId` | Update human review status |
+| `GET` | `/api/assets/...` | Read an asset using an expiring signature |
+| `GET` | `/api/v1/health` | Health check; public |
+
+To force a new versioned run:
+
+```json
+{
+  "reviewMode": "COORDINATION_REVIEW",
+  "force": true
+}
 ```
 
-**Frontend**
+## Analysis lifecycle
+
+1. The API verifies drawing ownership and daily usage.
+2. An `Analysis` run is persisted as `PENDING`.
+3. The local runner starts the run when a concurrency slot is available.
+4. The PDF is split into reusable rendered pages.
+5. Each page is reviewed using the selected mode.
+6. The model response must satisfy the structured contract.
+7. Findings are normalized and persisted as relational `AnalysisIssue` records.
+8. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
+9. The client polls only while the selected run is pending or processing.
+10. A reviewer confirms, resolves, or dismisses each finding.
+
+Malformed model output fails the run. It is never silently converted into a successful report with no findings.
+
+## Security model
+
+- Passwords are hashed with bcrypt.
+- Access tokens remain in client memory.
+- Refresh tokens are stored in `httpOnly` cookies.
+- Only SHA-256 refresh-token hashes are stored in PostgreSQL.
+- Refresh sessions rotate on every successful refresh and can be revoked.
+- Drawing records are ownership-scoped.
+- PDFs are checked by MIME type and `%PDF-` signature.
+- Raw storage directories are not publicly mounted.
+- PDFs and page images are served through HMAC-signed, expiring URLs.
+- API and expensive endpoints have independent rate limits.
+- AI output is untrusted input and validated before persistence.
+
+## Validation
+
+Backend:
+
 ```bash
+cd backend
+npm test
+npx prisma validate
+npx prisma migrate status
+npm audit --omit=dev
+```
+
+Client:
+
+```bash
+cd client
+npm run lint
 npm run build
-npm run preview
 ```
 
----
+## Current production boundaries
 
-## 📁 Project Structure
+- Local storage is private but not shared across instances. Move to S3-compatible object storage before horizontal scaling.
+- The persisted runner recovers restarts but does not coordinate multiple API instances. Add atomic run claiming or a managed job service before scaling out.
+- Compliance-risk review is advisory. Jurisdiction-specific sources and citations are required before representing results as code compliance.
+- There is no organization, invitation, or role model yet.
+- There is no subscription billing or metered plan enforcement yet.
+- Full provider and browser end-to-end test suites remain to be implemented.
+- AI-generated findings require professional review and sign-off.
 
-```
-Planly/
-├── backend/
-│   ├── src/
-│   │   ├── server.js          # Express server setup
-│   │   └── worker.js          # Background job processor
-│   ├── prisma/
-│   │   └── schema.prisma      # Database schema
-│   └── package.json
-├── client/
-│   ├── src/
-│   │   ├── App.jsx            # Main React component
-│   │   ├── components/        # Reusable UI components
-│   │   ├── pages/             # Page components
-│   │   └── styles/            # CSS styling
-│   └── package.json
-└── README.md
-```
+## Product direction
 
----
+The next valuable loop is:
 
-## 🔐 Authentication & Security
+> Upload a drawing set → understand its sheets and references → find evidence-backed risks → let a professional decide → upload a revision → prove what was fixed and what regressed.
 
-- **Password Security**: Passwords are hashed using Bcrypt before storage
-- **JWT Tokens**: Secure token-based authentication
-- **HTTP Security**: Helmet middleware for secure HTTP headers
-- **CORS**: Cross-Origin Resource Sharing configured for safe cross-domain requests
-- **Input Validation**: Zod schema validation for all API requests
-
----
-
-## 📊 Database Schema
-
-### Users
-- Store user profiles with encrypted passwords
-- Track creation and update timestamps
-
-### Projects
-- Organize drawings by user
-- Support multiple drawings per project
-
-### Drawings
-- Track uploaded files with metadata
-- Support multiple pages/images per drawing
-- Track processing status
-
-### Drawing Pages
-- Store individual page images from PDFs
-- Maintain page numbering
-
-### Analysis
-- Store AI-generated analysis results
-- Support multiple review modes per drawing
-- Track scores, summaries, and identified issues
-
----
-
-## 🔄 Processing Flow
-
-1. **Upload**: User uploads a PDF or image file
-2. **Page Extraction**: Multi-page PDFs are converted to individual images
-3. **Queue**: File processing job is added to BullMQ queue
-4. **Analysis**: OpenAI API analyzes the drawing across requested review modes
-5. **Storage**: Results (score, issues, report) are stored in database
-6. **Report**: User receives comprehensive analysis report
-
----
-
-## 📝 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-
-### Projects
-- `GET /api/projects` - List user projects
-- `POST /api/projects` - Create new project
-- `GET /api/projects/:id` - Get project details
-- `PUT /api/projects/:id` - Update project
-- `DELETE /api/projects/:id` - Delete project
-
-### Drawings
-- `POST /api/drawings/upload` - Upload drawing file
-- `GET /api/drawings/:id` - Get drawing details
-- `GET /api/drawings/:id/analysis` - Get analysis results
-- `POST /api/drawings/:id/analyze` - Trigger analysis
-
----
-
-## 🛠️ Available Scripts
-
-### Backend
-```bash
-npm run dev              # Development server with nodemon
-npm run start            # Production server
-npm run dev:worker       # Development worker with nodemon
-npm run worker           # Production worker
-npm run prisma:generate  # Generate Prisma client
-npm run prisma:migrate   # Run database migrations
-npm run prisma:studio    # Open Prisma Studio
-```
-
-### Frontend
-```bash
-npm run dev      # Development server
-npm run build    # Production build
-npm run lint     # Run ESLint
-npm run preview  # Preview production build
-```
-
----
-
-## 📄 License
-
-ISC License - See LICENSE file for details
-
----
-
-## 👤 Author
-
-[Aditya Praveen](https://github.com/adityaapraveen)
-
----
-
-## 📞 Support
-
-For issues, questions, or suggestions, please open an [GitHub Issue](https://github.com/adityaapraveen/Planly/issues).
-
----
-
-## 🎓 Demo
-
-Check out the [project demo](https://drive.google.com/file/d/13KberZGKsvIXNRiGXV3PCmi2XIN1O88H/view?usp=sharing) to see Planly in action.
+See [docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md) for research, competitive analysis, differentiated opportunities, AI architecture, metrics, and the prioritized roadmap.

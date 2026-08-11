@@ -2,6 +2,8 @@ import multer from 'multer'
 import path from 'path'
 import crypto from 'crypto'
 
+export const MAX_DRAWING_SIZE_BYTES = 20 * 1024 * 1024
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) =>{
         cb(null, 'uploads/drawings')
@@ -9,9 +11,7 @@ const storage = multer.diskStorage({
     filename: (req, file, cb) => {
         const uniqueSuffix = crypto.randomBytes(8).toString('hex')
 
-        const extension = path.extname(file.originalname)
-
-        cb(null, `${Date.now()}-${uniqueSuffix}${extension}`)
+        cb(null, `${Date.now()}-${uniqueSuffix}.pdf`)
     }
 })
 
@@ -29,6 +29,6 @@ export const uploadDrawing = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 20 * 1024 * 1024
+        fileSize: MAX_DRAWING_SIZE_BYTES
     }
 })

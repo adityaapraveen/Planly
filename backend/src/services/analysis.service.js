@@ -1,56 +1,27 @@
 import { prisma } from '../config/prisma.js'
+import { config } from '../config/config.js'
 import { AppError } from '../utils/AppError.js'
 import { renderPdfPages } from './pdf-render.service.js'
-import { generateVisionResponse } from './ai/ai.service.js'
+import {
+    generateVisionResponse,
+    getAIProviderMetadata
+} from './ai/ai.service.js'
 import { pageVisionReviewSystemPrompt } from '../prompts/pageVisionReview.prompt.js'
 import { REVIEW_MODES } from '../prompts/reviewModes.prompt.js'
+import {
+    calculateOverallScore,
+    issueToCreateInput,
+    parsePageAnalysis,
+    serializeIssue
+} from './analysis-result.js'
 
-const clamp01 = (value) => {
-    const number = Number(value)
-
-    if (Number.isNaN(number)) return 0
-
-    return Math.max(0, Math.min(1, number))
-}
-
-const normalizeIssue = (issue, pageNumber) => {
-    const location = issue.location || {}
-    const normalizedLocation = {
-        x: clamp01(location.x),
-        y: clamp01(location.y),
-        width: clamp01(location.width),
-        height: clamp01(location.height)
+const analysisInclude = {
+    issues: {
+        orderBy: [
+            { page: 'asc' },
+            { createdAt: 'asc' }
+        ]
     }
-    const hasLocation = normalizedLocation.width > 0 && normalizedLocation.height > 0
-    const severity = String(issue.severity || 'Medium').trim()
-    const normalizedSeverity = ['High', 'Medium', 'Low'].find(
-        (level) => level.toLowerCase() === severity.toLowerCase()
-    ) || 'Medium'
-
-    return {
-        id: issue.id || undefined,
-        title: issue.title || 'Untitled issue',
-        category: issue.category || 'Drawing Quality',
-        severity: normalizedSeverity,
-        confidence: clamp01(issue.confidence ?? 0.5),
-        page: Number(issue.page || pageNumber),
-        location: normalizedLocation,
-        hasLocation,
-        explanation: issue.explanation || '',
-        recommendation: issue.recommendation || ''
-    }
-}
-
-const calculateOverallScore = (issues) => {
-    let score = 100
-
-    for (const issue of issues) {
-        if (issue.severity === 'High') score -= 20
-        if (issue.severity === 'Medium') score -= 10
-        if (issue.severity === 'Low') score -= 5
-    }
-
-    return Math.max(0, score)
 }
 
 const buildReviewSystemPrompt = (reviewMode) => {
@@ -84,61 +55,35 @@ Important:
         temperature: 0.1
     })
 
-    const parsed = safeJsonParse(aiResponse)
+    return {
+        pageNumber: page.pageNumber,
+        ...parsePageAnalysis(aiResponse, page.pageNumber)
+    }
+}
 
-    const issues = Array.isArray(parsed.issues)
-        ? parsed.issues.map((issue) => normalizeIssue(issue, page.pageNumber))
+const legacyIssues = (snapshot) => Array.isArray(snapshot) ? snapshot : []
+
+export const serializeAnalysis = (analysis) => {
+    if (!analysis) return null
+
+    const issueRecords = Array.isArray(analysis.issues)
+        ? analysis.issues.map(serializeIssue)
         : []
 
     return {
-        pageNumber: page.pageNumber,
-        score: Number(parsed.score ?? 0),
-        summary: parsed.summary || '',
-        issues
+        ...analysis,
+        issues: issueRecords.length > 0
+            ? issueRecords
+            : legacyIssues(analysis.issuesSnapshot),
+        issuesSnapshot: undefined
     }
 }
 
-const safeJsonParse = (value) => {
-    if (value && typeof value === 'object') {
-        return value
-    }
-
-    const raw = String(value || '').trim()
-
-    try {
-        return JSON.parse(raw)
-    } catch {
-        const start = raw.indexOf('{')
-        const end = raw.lastIndexOf('}')
-
-        if (start >= 0 && end > start) {
-            const sliced = raw.slice(start, end + 1)
-            try {
-                return JSON.parse(sliced)
-            } catch {
-                // fall through
-            }
-        }
-
-        return {
-            score: 0,
-            summary: 'AI response could not be parsed into structured JSON.',
-            issues: []
-        }
-    }
-}
-
-export const analyzeDrawing = async ({
-    userId,
-    drawingId,
-    reviewMode = 'SUBMISSION_READINESS'
-}) => {
+const findOwnedDrawing = async ({ userId, drawingId }) => {
     const drawing = await prisma.drawing.findFirst({
         where: {
             id: drawingId,
-            project: {
-                userId
-            }
+            project: { userId }
         }
     })
 
@@ -146,32 +91,178 @@ export const analyzeDrawing = async ({
         throw new AppError('Drawing not found', 404)
     }
 
-    const existingAnalysis = await prisma.analysis.findUnique({
+    return drawing
+}
+
+const assertWithinDailyLimit = async (userId) => {
+    const startOfToday = new Date()
+    startOfToday.setUTCHours(0, 0, 0, 0)
+
+    const runsToday = await prisma.analysis.count({
         where: {
-            drawingId_reviewMode: {
-                drawingId,
-                reviewMode
+            createdAt: { gte: startOfToday },
+            drawing: {
+                project: { userId }
             }
         }
     })
 
-    if (existingAnalysis) {
-        return existingAnalysis
+    if (runsToday >= config.ANALYSIS_DAILY_LIMIT) {
+        throw new AppError(
+            `Daily analysis limit of ${config.ANALYSIS_DAILY_LIMIT} reached`,
+            429
+        )
     }
+}
+
+export const requestDrawingAnalysis = async ({
+    userId,
+    drawingId,
+    reviewMode = 'SUBMISSION_READINESS',
+    force = false
+}) => {
+    const drawing = await findOwnedDrawing({ userId, drawingId })
+
+    const activeAnalysis = await prisma.analysis.findFirst({
+        where: {
+            drawingId,
+            reviewMode,
+            status: { in: ['PENDING', 'PROCESSING'] }
+        },
+        orderBy: { createdAt: 'desc' },
+        include: analysisInclude
+    })
+
+    if (activeAnalysis) {
+        return {
+            analysis: serializeAnalysis(activeAnalysis),
+            shouldStart: true,
+            created: false
+        }
+    }
+
+    if (!force) {
+        const completedAnalysis = await prisma.analysis.findFirst({
+            where: {
+                drawingId,
+                reviewMode,
+                status: 'COMPLETED'
+            },
+            orderBy: { createdAt: 'desc' },
+            include: analysisInclude
+        })
+
+        if (completedAnalysis) {
+            return {
+                analysis: serializeAnalysis(completedAnalysis),
+                shouldStart: false,
+                created: false
+            }
+        }
+    }
+
+    await assertWithinDailyLimit(userId)
+
+    const { provider, model } = getAIProviderMetadata()
+    const analysis = await prisma.analysis.create({
+        data: {
+            drawingId: drawing.id,
+            reviewMode,
+            status: 'PENDING',
+            issuesSnapshot: [],
+            provider,
+            model,
+            promptVersion: config.AI_PROMPT_VERSION
+        },
+        include: analysisInclude
+    })
 
     await prisma.drawing.update({
         where: { id: drawing.id },
-        data: { status: 'PROCESSING' }
+        data: { status: 'PENDING' }
     })
+
+    return {
+        analysis: serializeAnalysis(analysis),
+        shouldStart: true,
+        created: true
+    }
+}
+
+const refreshDrawingStatus = async (drawingId) => {
+    const activeRun = await prisma.analysis.findFirst({
+        where: {
+            drawingId,
+            status: { in: ['PENDING', 'PROCESSING'] }
+        },
+        select: { id: true }
+    })
+
+    let status = 'PENDING'
+
+    if (activeRun) {
+        status = 'PROCESSING'
+    } else {
+        const latestDefaultRun = await prisma.analysis.findFirst({
+            where: {
+                drawingId,
+                reviewMode: 'SUBMISSION_READINESS'
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { status: true }
+        })
+
+        status = latestDefaultRun?.status || 'PENDING'
+    }
+
+    await prisma.drawing.update({
+        where: { id: drawingId },
+        data: { status }
+    }).catch((error) => {
+        if (error?.code !== 'P2025') throw error
+    })
+}
+
+export const processAnalysisRun = async ({ analysisId, userId }) => {
+    const run = await prisma.analysis.findFirst({
+        where: {
+            id: analysisId,
+            drawing: {
+                project: { userId }
+            }
+        },
+        include: { drawing: true }
+    })
+
+    if (!run) {
+        throw new AppError('Analysis run not found', 404)
+    }
+
+    if (run.status === 'COMPLETED') {
+        return run
+    }
 
     const startedAt = Date.now()
 
-    try {
-        const systemPrompt = buildReviewSystemPrompt(reviewMode)
+    await prisma.analysis.update({
+        where: { id: run.id },
+        data: {
+            status: 'PROCESSING',
+            startedAt: new Date(),
+            completedAt: null,
+            errorCode: null,
+            errorMessage: null,
+            attempt: { increment: 1 }
+        }
+    })
 
+    await refreshDrawingStatus(run.drawingId)
+
+    try {
+        const systemPrompt = buildReviewSystemPrompt(run.reviewMode)
         const pages = await renderPdfPages({
-            drawingId: drawing.id,
-            pdfPath: drawing.filePath
+            drawingId: run.drawing.id,
+            pdfPath: run.drawing.filePath
         })
 
         if (!pages.length) {
@@ -181,52 +272,70 @@ export const analyzeDrawing = async ({
         const pageResults = []
 
         for (const page of pages) {
-            const pageResult = await analyzeSinglePage({
-                drawing,
+            pageResults.push(await analyzeSinglePage({
+                drawing: run.drawing,
                 page,
                 systemPrompt
-            })
-
-            pageResults.push(pageResult)
+            }))
         }
 
         const allIssues = pageResults.flatMap((page) => page.issues)
-
         const score = calculateOverallScore(allIssues)
+        const summary = allIssues.length === 0
+            ? 'No visible issues were identified in the reviewed pages. Human verification is still recommended.'
+            : `The review found ${allIssues.length} issue(s) across ${pageResults.length} page(s). Review each finding before using this result for a submission or construction decision.`
+        const durationMs = Date.now() - startedAt
 
-        const summary =
-            allIssues.length === 0
-                ? 'No major drawing issues were identified in the reviewed pages.'
-                : `The review found ${allIssues.length} issue(s) across ${pageResults.length} page(s), with focus areas in documentation quality, drawing readability, and coordination readiness.`
+        const completedAnalysis = await prisma.$transaction(async (tx) => {
+            await tx.analysisIssue.deleteMany({
+                where: { analysisId: run.id }
+            })
 
-        const analysis = await prisma.analysis.create({
-            data: {
-                drawingId: drawing.id,
-                score,
-                summary,
-                issues: allIssues,
-                reviewMode,
-                rawOutput: {
-                    pageResults,
-                    reviewMode,
-                    analysisMode: 'page-by-page-vision',
-                    durationMs: Date.now() - startedAt
-                }
+            if (allIssues.length > 0) {
+                await tx.analysisIssue.createMany({
+                    data: allIssues.map((issue) => ({
+                        ...issueToCreateInput(issue),
+                        analysisId: run.id
+                    }))
+                })
             }
+
+            return tx.analysis.update({
+                where: { id: run.id },
+                data: {
+                    status: 'COMPLETED',
+                    score,
+                    summary,
+                    issuesSnapshot: allIssues,
+                    durationMs,
+                    completedAt: new Date(),
+                    rawOutput: {
+                        pageResults,
+                        reviewMode: run.reviewMode,
+                        analysisMode: 'page-by-page-vision',
+                        scoringVersion: 'confidence-weighted-v1',
+                        durationMs
+                    }
+                },
+                include: analysisInclude
+            })
         })
 
-        await prisma.drawing.update({
-            where: { id: drawing.id },
-            data: { status: 'COMPLETED' }
-        })
-
-        return analysis
+        await refreshDrawingStatus(run.drawingId)
+        return serializeAnalysis(completedAnalysis)
     } catch (error) {
-        await prisma.drawing.update({
-            where: { id: drawing.id },
-            data: { status: 'FAILED' }
-        })
+        await prisma.analysis.update({
+            where: { id: run.id },
+            data: {
+                status: 'FAILED',
+                errorCode: error?.code || 'ANALYSIS_FAILED',
+                errorMessage: String(error?.message || 'Analysis failed').slice(0, 2000),
+                durationMs: Date.now() - startedAt,
+                completedAt: new Date()
+            }
+        }).catch(() => null)
 
+        await refreshDrawingStatus(run.drawingId)
         throw error
     }
 }
@@ -236,31 +345,45 @@ export const getDrawingAnalysis = async ({
     drawingId,
     reviewMode = 'SUBMISSION_READINESS'
 }) => {
-    const drawing = await prisma.drawing.findFirst({
-        where: {
-            id: drawingId,
-            project: {
-                userId
-            }
-        }
-    })
+    await findOwnedDrawing({ userId, drawingId })
 
-    if (!drawing) {
-        throw new AppError('Drawing not found', 404)
-    }
-
-    const analysis = await prisma.analysis.findUnique({
-        where: {
-            drawingId_reviewMode: {
-                drawingId,
-                reviewMode
-            }
-        }
+    const analysis = await prisma.analysis.findFirst({
+        where: { drawingId, reviewMode },
+        orderBy: { createdAt: 'desc' },
+        include: analysisInclude
     })
 
     if (!analysis) {
         throw new AppError('Analysis not found for this review mode', 404)
     }
 
-    return analysis
+    return serializeAnalysis(analysis)
+}
+
+export const updateAnalysisIssueStatus = async ({
+    userId,
+    issueId,
+    status
+}) => {
+    const issue = await prisma.analysisIssue.findFirst({
+        where: {
+            id: issueId,
+            analysis: {
+                drawing: {
+                    project: { userId }
+                }
+            }
+        }
+    })
+
+    if (!issue) {
+        throw new AppError('Analysis issue not found', 404)
+    }
+
+    const updatedIssue = await prisma.analysisIssue.update({
+        where: { id: issue.id },
+        data: { status }
+    })
+
+    return serializeIssue(updatedIssue)
 }

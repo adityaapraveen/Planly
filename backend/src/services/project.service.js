@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma.js"
 import { AppError } from "../utils/AppError.js"
+import { deleteStoredAssets } from './local-storage.service.js'
 
 export const createProject = async ({ userId, name, description }) => {
     return prisma.project.create({
@@ -22,8 +23,10 @@ export const getUserProjects = async ({ userId }) => {
                     id: true,
                     analyses: {
                         where: {
-                            reviewMode: 'SUBMISSION_READINESS'
+                            reviewMode: 'SUBMISSION_READINESS',
+                            status: 'COMPLETED'
                         },
+                        orderBy: { createdAt: 'desc' },
                         take: 1,
                         select: {
                             id: true
@@ -77,10 +80,30 @@ export const updateProject = async ({ userId, projectId, name, description }) =>
 export const deleteProject = async ({ userId, projectId }) => {
     await getProjectById({ userId, projectId })
 
+    const drawings = await prisma.drawing.findMany({
+        where: { projectId },
+        select: {
+            filePath: true,
+            pages: {
+                select: { imagePath: true }
+            }
+        }
+    })
+
     await prisma.project.delete({
         where: {
             id: projectId
         }
+    })
+
+    await deleteStoredAssets(drawings.flatMap((drawing) => [
+        drawing.filePath,
+        ...drawing.pages.map((page) => page.imagePath)
+    ])).catch((error) => {
+        console.error('Project database record deleted, but some local assets could not be removed', {
+            projectId,
+            message: error?.message
+        })
     })
 
     return null

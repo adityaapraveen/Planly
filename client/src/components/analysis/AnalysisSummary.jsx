@@ -7,7 +7,7 @@ export function AnalysisSummary({ analysis, issues }) {
   return (
     <div className="analysis-summary-grid">
       <div className="analysis-summary-card score">
-        <div className="label">Compliance Score</div>
+        <div className="label">Review Readiness Score</div>
         <div className="value">{score}</div>
       </div>
       <div className="analysis-summary-card">
@@ -21,6 +21,7 @@ export function AnalysisSummary({ analysis, issues }) {
       <div className="analysis-summary-card summary">
         <div className="label">AI Summary</div>
         <p>{analysis?.summary || 'No summary generated yet.'}</p>
+        <p className="analysis-disclaimer">AI-assisted review only. A qualified professional must verify all findings.</p>
       </div>
     </div>
   )

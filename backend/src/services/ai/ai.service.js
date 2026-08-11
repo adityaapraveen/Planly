@@ -14,6 +14,16 @@ if (!provider) {
     throw new Error(`Unsupported AI provider: ${config.AI_PROVIDER}`)
 }
 
+const providerModels = {
+    openai: config.OPENAI_MODEL,
+    openrouter: config.OPENROUTER_MODEL
+}
+
+export const getAIProviderMetadata = () => ({
+    provider: config.AI_PROVIDER,
+    model: providerModels[config.AI_PROVIDER] || 'provider-default'
+})
+
 export const generateAIResponse = async ({
     systemPrompt,
     userPrompt,

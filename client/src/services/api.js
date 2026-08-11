@@ -1,6 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 let accessToken = null
+let refreshPromise = null
 
 export function setAccessToken(token) {
   accessToken = token
@@ -19,21 +20,29 @@ export function clearAccessToken() {
  * Returns the new access token or null on failure.
  */
 async function refreshToken() {
-  try {
-    const res = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    if (!res.ok) return null
-    const json = await res.json()
-    if (json.success && json.data?.accessToken) {
-      setAccessToken(json.data.accessToken)
-      return json.data.accessToken
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) return null
+      const json = await res.json()
+      if (json.success && json.data?.accessToken) {
+        setAccessToken(json.data.accessToken)
+        return json.data.accessToken
+      }
+      return null
+    } catch {
+      return null
+    } finally {
+      refreshPromise = null
     }
-    return null
-  } catch {
-    return null
-  }
+  })()
+
+  return refreshPromise
 }
 
 /**

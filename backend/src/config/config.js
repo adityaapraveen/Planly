@@ -24,15 +24,11 @@ const envSchema = z.object({
     COOKIE_EXPIRES_IN: z.coerce.number().int().positive().default(7),
     AI_PROVIDER: z.enum([
         'openai',
-        'anthropic',
         'openrouter'
     ]),
 
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().optional(),
-
-    ANTHROPIC_API_KEY: z.string().optional(),
-    ANTHROPIC_MODEL: z.string().optional(),
 
     OPENROUTER_API_KEY: z.string().optional(),
     OPENROUTER_MODEL: z.string().optional(),
@@ -48,7 +44,15 @@ const envSchema = z.object({
         .int()
         .min(0)
         .max(5)
-        .default(0)
+        .default(0),
+    AI_PROMPT_VERSION: z.string().trim().min(1).default('v1'),
+    ANALYSIS_DAILY_LIMIT: z.coerce.number().int().positive().default(25),
+    ASSET_URL_TTL_SECONDS: z.coerce
+        .number()
+        .int()
+        .min(60)
+        .max(86_400)
+        .default(900)
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -79,6 +83,9 @@ export const config = {
     OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL,
     AI_REQUEST_TIMEOUT_MS: parsed.data.AI_REQUEST_TIMEOUT_MS,
-    AI_MAX_RETRIES: parsed.data.AI_MAX_RETRIES
+    AI_MAX_RETRIES: parsed.data.AI_MAX_RETRIES,
+    AI_PROMPT_VERSION: parsed.data.AI_PROMPT_VERSION,
+    ANALYSIS_DAILY_LIMIT: parsed.data.ANALYSIS_DAILY_LIMIT,
+    ASSET_URL_TTL_SECONDS: parsed.data.ASSET_URL_TTL_SECONDS
 
 }

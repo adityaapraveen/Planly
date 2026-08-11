@@ -11,9 +11,16 @@ import { authRouter } from './routes/auth.routes.js'
 import { projectRouter } from './routes/project.routes.js'
 import { drawingRouter } from './routes/drawing.routes.js'
 import { analysisRouter } from './routes/analysis.routes.js'
+import { requestContext } from './middlewares/requestContext.js'
+import { apiRateLimit, authRateLimit } from './middlewares/rateLimits.js'
+import { assetRouter } from './routes/asset.routes.js'
 
 
 export const app = express()
+
+app.disable('x-powered-by')
+app.set('trust proxy', 1)
+app.use(requestContext)
 
 app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -28,19 +35,16 @@ app.use(express.json({
     limit: '2mb'
 }))
 
-app.use(
-    '/uploads',
-    express.static('uploads')
-)
-
 app.use(cookieParser())
 
 if (config.NODE_ENV === 'dev') {
-    app.use(morgan("development"))
+    app.use(morgan('dev'))
 }
 
 app.use('/api/v1/health', healthRouter)
-app.use('/api/auth', authRouter)
+app.use('/api/assets', assetRouter)
+app.use('/api', apiRateLimit)
+app.use('/api/auth', authRateLimit, authRouter)
 app.use('/api/projects', projectRouter)
 app.use('/api/projects', drawingRouter)
 app.use('/api', analysisRouter)
