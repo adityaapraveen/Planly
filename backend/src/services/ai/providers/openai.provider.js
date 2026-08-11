@@ -5,7 +5,9 @@ import OpenAI from 'openai'
 import { config } from '../../../config/config.js'
 
 const client = new OpenAI({
-    apiKey: config.OPENAI_API_KEY
+    apiKey: config.OPENAI_API_KEY,
+    timeout: config.AI_REQUEST_TIMEOUT_MS,
+    maxRetries: config.AI_MAX_RETRIES
 })
 
 const imageToBase64 = async (imagePath) => {
@@ -13,6 +15,16 @@ const imageToBase64 = async (imagePath) => {
     const ext = path.extname(imagePath).replace('.', '') || 'png'
 
     return `data:image/${ext};base64,${buffer.toString('base64')}`
+}
+
+const getResponseContent = (response) => {
+    const content = response?.choices?.[0]?.message?.content
+
+    if (typeof content === 'string' && content.trim()) {
+        return content
+    }
+
+    throw new Error('OpenAI returned no completion content')
 }
 
 export const openaiProvider = {
@@ -39,7 +51,7 @@ export const openaiProvider = {
             ]
         })
 
-        return response.choices[0].message.content
+        return getResponseContent(response)
     },
 
     generateVision: async ({
@@ -81,6 +93,6 @@ export const openaiProvider = {
             ]
         })
 
-        return response.choices[0].message.content
+        return getResponseContent(response)
     }
 }

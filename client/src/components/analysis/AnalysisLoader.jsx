@@ -1,7 +1,7 @@
 import { Spinner } from '../ui/Spinner'
 
 const copyMap = {
-  PENDING: 'Queued for analysis',
+  PENDING: 'Waiting for analysis to start',
   PROCESSING: 'AI is reviewing this drawing',
 }
 

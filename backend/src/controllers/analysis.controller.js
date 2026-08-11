@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
-import { addAnalysisJob } from '../queues/analysis.queue.js'
 import { getDrawingAnalysis } from '../services/analysis.service.js'
+import { startAnalysis } from '../services/analysis-runner.service.js'
 
 const reviewModeSchema = z.object({
     reviewMode: z
@@ -56,9 +56,17 @@ export const analyzeDrawingController = asyncHandler(async (req, res) => {
     }
 
     if (drawing.status === 'PENDING' || drawing.status === 'PROCESSING') {
+        const restarted = startAnalysis({
+            drawingId: drawing.id,
+            userId: req.user.id,
+            reviewMode
+        })
+
         return res.status(202).json({
             success: true,
-            message: 'Analysis is already in progress',
+            message: restarted
+                ? 'Analysis restarted successfully'
+                : 'Analysis is already in progress',
             data: {
                 drawingId: drawing.id,
                 status: drawing.status,
@@ -72,24 +80,15 @@ export const analyzeDrawingController = asyncHandler(async (req, res) => {
         data: { status: 'PENDING' }
     })
 
-    try {
-        await addAnalysisJob({
-            drawingId: drawing.id,
-            userId: req.user.id,
-            reviewMode
-        })
-    } catch {
-        await prisma.drawing.update({
-            where: { id: drawing.id },
-            data: { status: 'FAILED' }
-        })
-
-        throw new AppError('Could not queue analysis job. Please try again.', 503)
-    }
+    startAnalysis({
+        drawingId: drawing.id,
+        userId: req.user.id,
+        reviewMode
+    })
 
     res.status(202).json({
         success: true,
-        message: 'Analysis queued successfully',
+        message: 'Analysis started successfully',
         data: {
             drawingId: drawing.id,
             status: 'PENDING',

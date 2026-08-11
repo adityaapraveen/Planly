@@ -6,7 +6,9 @@ import { config } from '../../../config/config.js'
 
 const client = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: config.OPENROUTER_API_KEY
+    apiKey: config.OPENROUTER_API_KEY,
+    timeout: config.AI_REQUEST_TIMEOUT_MS,
+    maxRetries: config.AI_MAX_RETRIES
 })
 
 const imageToBase64 = async (imagePath) => {
@@ -14,6 +16,26 @@ const imageToBase64 = async (imagePath) => {
     const ext = path.extname(imagePath).replace('.', '') || 'png'
 
     return `data:image/${ext};base64,${buffer.toString('base64')}`
+}
+
+const getResponseContent = (response) => {
+    const content = response?.choices?.[0]?.message?.content
+
+    if (typeof content === 'string' && content.trim()) {
+        return content
+    }
+
+    const providerError = response?.error
+    const error = new Error(
+        providerError?.message ||
+        'OpenRouter returned no completion content'
+    )
+
+    error.status = providerError?.code || 502
+    error.code = providerError?.code || 'EMPTY_PROVIDER_RESPONSE'
+    error.error = providerError
+
+    throw error
 }
 
 export const openrouterProvider = {
@@ -40,7 +62,7 @@ export const openrouterProvider = {
             ]
         })
 
-        return response.choices[0].message.content
+        return getResponseContent(response)
     },
 
     generateVision: async ({
@@ -82,6 +104,6 @@ export const openrouterProvider = {
             ]
         })
 
-        return response.choices[0].message.content
+        return getResponseContent(response)
     }
 }

@@ -3,6 +3,7 @@ import { AppError } from '../utils/AppError.js'
 import { renderPdfPages } from './pdf-render.service.js'
 import { generateVisionResponse } from './ai/ai.service.js'
 import { pageVisionReviewSystemPrompt } from '../prompts/pageVisionReview.prompt.js'
+import { REVIEW_MODES } from '../prompts/reviewModes.prompt.js'
 
 const clamp01 = (value) => {
     const number = Number(value)
@@ -52,9 +53,22 @@ const calculateOverallScore = (issues) => {
     return Math.max(0, score)
 }
 
-const analyzeSinglePage = async ({ drawing, page }) => {
+const buildReviewSystemPrompt = (reviewMode) => {
+    const reviewModeConfig = REVIEW_MODES[reviewMode]
+
+    if (!reviewModeConfig) {
+        throw new AppError(`Unsupported review mode: ${reviewMode}`, 400)
+    }
+
+    return pageVisionReviewSystemPrompt({
+        reviewModeLabel: reviewModeConfig.label,
+        reviewModeFocus: reviewModeConfig.focus
+    })
+}
+
+const analyzeSinglePage = async ({ drawing, page, systemPrompt }) => {
     const aiResponse = await generateVisionResponse({
-        systemPrompt: pageVisionReviewSystemPrompt,
+        systemPrompt,
         userPrompt: `
 Analyze page ${page.pageNumber} of this architectural drawing.
 
@@ -153,6 +167,8 @@ export const analyzeDrawing = async ({
     const startedAt = Date.now()
 
     try {
+        const systemPrompt = buildReviewSystemPrompt(reviewMode)
+
         const pages = await renderPdfPages({
             drawingId: drawing.id,
             pdfPath: drawing.filePath
@@ -167,7 +183,8 @@ export const analyzeDrawing = async ({
         for (const page of pages) {
             const pageResult = await analyzeSinglePage({
                 drawing,
-                page
+                page,
+                systemPrompt
             })
 
             pageResults.push(pageResult)

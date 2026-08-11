@@ -15,10 +15,7 @@ export const drawingRouter =
 
 drawingRouter.use(requireAuth)
 
-drawingRouter
-    .route('/:projectId/drawings')
-
-    .post(
+drawingRouter.route('/:projectId/drawings').post(
         uploadDrawing.single('drawing'),
         uploadDrawingController
     )

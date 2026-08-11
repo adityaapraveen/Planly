@@ -2,7 +2,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js'
 
 import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing, getDrawingReport } from '../services/drawing.service.js'
 
-import { addAnalysisJob } from '../queues/analysis.queue.js'
+import { startAnalysis } from '../services/analysis-runner.service.js'
 
 export const uploadDrawingController = asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -18,14 +18,14 @@ export const uploadDrawingController = asyncHandler(async (req, res) => {
         file: req.file
     })
 
-    await addAnalysisJob({
+    startAnalysis({
         drawingId: drawing.id,
         userId: req.user.id
     })
 
     res.status(202).json({
         success: true,
-        message: 'Drawing uploaded successfully, Analysis has started',
+        message: 'Drawing uploaded successfully. Analysis has started.',
 
         data: {
             drawing
