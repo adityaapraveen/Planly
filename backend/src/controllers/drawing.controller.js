@@ -3,6 +3,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js'
 import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing, getDrawingReport } from '../services/drawing.service.js'
 
 import { startAnalysis } from '../services/analysis-runner.service.js'
+import { requestDrawingAnalysis } from '../services/analysis.service.js'
 
 export const uploadDrawingController = asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -18,9 +19,28 @@ export const uploadDrawingController = asyncHandler(async (req, res) => {
         file: req.file
     })
 
+    let result
+
+    try {
+        result = await requestDrawingAnalysis({
+            drawingId: drawing.id,
+            userId: req.user.id,
+            reviewMode: 'SUBMISSION_READINESS'
+        })
+    } catch (error) {
+        await deleteProjectDrawing({
+            userId: req.user.id,
+            projectId: req.params.projectId,
+            drawingId: drawing.id
+        })
+        throw error
+    }
+
     startAnalysis({
+        analysisId: result.analysis.id,
         drawingId: drawing.id,
-        userId: req.user.id
+        userId: req.user.id,
+        reviewMode: 'SUBMISSION_READINESS'
     })
 
     res.status(202).json({
@@ -28,7 +48,17 @@ export const uploadDrawingController = asyncHandler(async (req, res) => {
         message: 'Drawing uploaded successfully. Analysis has started.',
 
         data: {
-            drawing
+            drawing: {
+                id: drawing.id,
+                fileName: drawing.fileName,
+                mimeType: drawing.mimeType,
+                size: drawing.size,
+                status: result.analysis.status,
+                projectId: drawing.projectId,
+                createdAt: drawing.createdAt,
+                updatedAt: drawing.updatedAt
+            },
+            analysis: result.analysis
         }
     })
 })

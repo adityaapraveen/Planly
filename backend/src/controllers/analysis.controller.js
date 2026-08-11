@@ -1,8 +1,10 @@
 import { z } from 'zod'
 import { asyncHandler } from '../middlewares/asyncHandler.js'
-import { prisma } from '../config/prisma.js'
-import { AppError } from '../utils/AppError.js'
-import { getDrawingAnalysis } from '../services/analysis.service.js'
+import {
+    getDrawingAnalysis,
+    requestDrawingAnalysis,
+    updateAnalysisIssueStatus
+} from '../services/analysis.service.js'
 import { startAnalysis } from '../services/analysis-runner.service.js'
 
 const reviewModeSchema = z.object({
@@ -14,85 +16,44 @@ const reviewModeSchema = z.object({
             'COORDINATION_REVIEW',
             'COMPLIANCE_RISK_REVIEW'
         ])
-        .default('SUBMISSION_READINESS')
+        .default('SUBMISSION_READINESS'),
+    force: z.boolean().default(false)
+})
+
+const issueStatusSchema = z.object({
+    status: z.enum(['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED'])
 })
 
 export const analyzeDrawingController = asyncHandler(async (req, res) => {
-    const { reviewMode } = reviewModeSchema.parse(req.body ?? {})
-
-    const drawing = await prisma.drawing.findFirst({
-        where: {
-            id: req.params.drawingId,
-            project: {
-                userId: req.user.id
-            }
-        }
+    const { reviewMode, force } = reviewModeSchema.parse(req.body ?? {})
+    const result = await requestDrawingAnalysis({
+        drawingId: req.params.drawingId,
+        userId: req.user.id,
+        reviewMode,
+        force
     })
 
-    if (!drawing) {
-        throw new AppError('Drawing not found', 404)
-    }
-
-    const existingAnalysis = await prisma.analysis.findUnique({
-        where: {
-            drawingId_reviewMode: {
-                drawingId: drawing.id,
-                reviewMode
-            }
-        }
-    })
-
-    if (existingAnalysis) {
-        return res.status(200).json({
-            success: true,
-            message: 'Analysis already completed for this review mode',
-            data: {
-                drawingId: drawing.id,
-                status: 'COMPLETED',
-                reviewMode,
-                analysis: existingAnalysis
-            }
-        })
-    }
-
-    if (drawing.status === 'PENDING' || drawing.status === 'PROCESSING') {
-        const restarted = startAnalysis({
-            drawingId: drawing.id,
+    if (result.shouldStart) {
+        startAnalysis({
+            analysisId: result.analysis.id,
+            drawingId: req.params.drawingId,
             userId: req.user.id,
             reviewMode
         })
-
-        return res.status(202).json({
-            success: true,
-            message: restarted
-                ? 'Analysis restarted successfully'
-                : 'Analysis is already in progress',
-            data: {
-                drawingId: drawing.id,
-                status: drawing.status,
-                reviewMode
-            }
-        })
     }
 
-    await prisma.drawing.update({
-        where: { id: drawing.id },
-        data: { status: 'PENDING' }
-    })
-
-    startAnalysis({
-        drawingId: drawing.id,
-        userId: req.user.id,
-        reviewMode
-    })
-
-    res.status(202).json({
+    res.status(result.shouldStart ? 202 : 200).json({
         success: true,
-        message: 'Analysis started successfully',
+        message: result.created
+            ? 'Analysis started successfully'
+            : result.shouldStart
+                ? 'Analysis is already in progress'
+                : 'Latest completed analysis returned',
         data: {
-            drawingId: drawing.id,
-            status: 'PENDING',
-            reviewMode
+            drawingId: req.params.drawingId,
+            status: result.analysis.status,
+            reviewMode,
+            analysis: result.analysis
         }
     })
 })
@@ -111,5 +72,20 @@ export const getDrawingAnalysisController = asyncHandler(async (req, res) => {
         data: {
             analysis
         }
+    })
+})
+
+export const updateAnalysisIssueController = asyncHandler(async (req, res) => {
+    const { status } = issueStatusSchema.parse(req.body)
+    const issue = await updateAnalysisIssueStatus({
+        userId: req.user.id,
+        issueId: req.params.issueId,
+        status
+    })
+
+    res.status(200).json({
+        success: true,
+        message: 'Finding status updated',
+        data: { issue }
     })
 })

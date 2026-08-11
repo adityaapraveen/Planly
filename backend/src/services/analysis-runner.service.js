@@ -1,48 +1,93 @@
-import { analyzeDrawing } from './analysis.service.js'
+import { prisma } from '../config/prisma.js'
+import { processAnalysisRun } from './analysis.service.js'
 
+const MAX_CONCURRENT_ANALYSES = 2
 const activeAnalyses = new Map()
+const pendingAnalyses = []
+const pendingAnalysisIds = new Set()
+
+const runNextAnalyses = () => {
+    while (
+        activeAnalyses.size < MAX_CONCURRENT_ANALYSES &&
+        pendingAnalyses.length > 0
+    ) {
+        const request = pendingAnalyses.shift()
+        pendingAnalysisIds.delete(request.analysisId)
+
+        const task = Promise.resolve()
+            .then(() => processAnalysisRun(request))
+            .then(() => {
+                console.log(`Analysis completed: ${request.analysisId}`)
+            })
+            .catch((error) => {
+                console.error(`Analysis failed for drawing ${request.drawingId}`, {
+                    analysisId: request.analysisId,
+                    message: error?.message,
+                    status: error?.status,
+                    code: error?.code,
+                    providerMessage:
+                        error?.error?.metadata?.raw ||
+                        error?.error?.message
+                })
+            })
+            .finally(() => {
+                activeAnalyses.delete(request.analysisId)
+                runNextAnalyses()
+            })
+
+        activeAnalyses.set(request.analysisId, task)
+    }
+}
 
 /**
- * Starts analysis without holding the HTTP request open.
- *
- * This is intentionally process-local. It is suitable while the API runs as a
- * single instance, but it does not survive restarts or coordinate across
- * multiple server instances. Use a durable job system again if those
- * guarantees become necessary.
+ * Schedules a persisted analysis run without holding the HTTP request open.
+ * PostgreSQL stores the run state; this process only limits local concurrency.
  */
-export const startAnalysis = ({
-    drawingId,
-    userId,
-    reviewMode = 'SUBMISSION_READINESS'
-}) => {
-    // A drawing has one shared status field, so only one of its review modes
-    // can be processed at a time without reporting misleading state.
-    const analysisKey = drawingId
-
-    if (activeAnalyses.has(analysisKey)) {
+export const startAnalysis = ({ analysisId, drawingId, userId }) => {
+    if (
+        activeAnalyses.has(analysisId) ||
+        pendingAnalysisIds.has(analysisId)
+    ) {
         return false
     }
 
-    const analysisTask = Promise.resolve()
-        .then(() => analyzeDrawing({ drawingId, userId, reviewMode }))
-        .then((analysis) => {
-            console.log(`Analysis completed: ${analysis.id}`)
-        })
-        .catch((error) => {
-            console.error(`Analysis failed for drawing ${drawingId}`, {
-                message: error?.message,
-                status: error?.status,
-                code: error?.code,
-                providerMessage:
-                    error?.error?.metadata?.raw ||
-                    error?.error?.message
-            })
-        })
-        .finally(() => {
-            activeAnalyses.delete(analysisKey)
-        })
-
-    activeAnalyses.set(analysisKey, analysisTask)
-
+    pendingAnalysisIds.add(analysisId)
+    pendingAnalyses.push({ analysisId, drawingId, userId })
+    queueMicrotask(runNextAnalyses)
     return true
 }
+
+export const recoverInterruptedAnalyses = async () => {
+    const interruptedRuns = await prisma.analysis.findMany({
+        where: {
+            status: { in: ['PENDING', 'PROCESSING'] }
+        },
+        orderBy: { createdAt: 'asc' },
+        select: {
+            id: true,
+            drawingId: true,
+            drawing: {
+                select: {
+                    project: {
+                        select: { userId: true }
+                    }
+                }
+            }
+        }
+    })
+
+    for (const run of interruptedRuns) {
+        startAnalysis({
+            analysisId: run.id,
+            drawingId: run.drawingId,
+            userId: run.drawing.project.userId
+        })
+    }
+
+    if (interruptedRuns.length > 0) {
+        console.log(`Recovered ${interruptedRuns.length} interrupted analysis run(s)`)
+    }
+}
+
+export const waitForActiveAnalyses = () =>
+    Promise.allSettled([...activeAnalyses.values()])

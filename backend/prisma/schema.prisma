@@ -13,7 +13,8 @@ model User {
   email    String @unique
   password String
 
-  projects Project[]
+  projects        Project[]
+  refreshSessions RefreshSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,23 +78,80 @@ model DrawingPage {
 }
 
 model Analysis {
-  id        String  @id @default(uuid())
-  score     Int
-  summary   String
-  issues    Json
-  rawOutput Json?
-  reportUrl String?
+  id             String  @id @default(uuid())
+  score          Int?
+  summary        String?
+  issuesSnapshot Json?   @map("issues")
+  rawOutput      Json?
+  reportUrl      String?
 
-  reviewMode ReviewMode @default(SUBMISSION_READINESS)
+  reviewMode    ReviewMode     @default(SUBMISSION_READINESS)
+  status        AnalysisStatus @default(PENDING)
+  errorCode     String?
+  errorMessage  String?
+  provider      String?
+  model         String?
+  promptVersion String         @default("v1")
+  attempt       Int            @default(0)
+  durationMs    Int?
+  startedAt     DateTime?
+  completedAt   DateTime?
 
   drawingId String
-  drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  drawing   Drawing         @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  issues    AnalysisIssue[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([drawingId, reviewMode])
+  @@index([drawingId, reviewMode, createdAt])
+  @@index([status])
   @@map("analyses")
+}
+
+model AnalysisIssue {
+  id             String              @id @default(uuid())
+  title          String
+  category       String
+  severity       String
+  confidence     Float
+  page           Int
+  x              Float
+  y              Float
+  width          Float
+  height         Float
+  hasLocation    Boolean             @default(true)
+  explanation    String
+  recommendation String
+  status         AnalysisIssueStatus @default(OPEN)
+
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([analysisId, status])
+  @@index([severity])
+  @@map("analysis_issues")
+}
+
+model RefreshSession {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
 }
 
 enum ReviewMode {
@@ -109,4 +167,18 @@ enum DrawingStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AnalysisIssueStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
 }

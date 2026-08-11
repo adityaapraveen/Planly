@@ -1,7 +1,7 @@
 import { IssueCard } from './IssueCard'
 import { getIssueStableId } from './issue-id'
 
-export function IssueSidebar({ issues, selectedIssueId, onSelectIssue }) {
+export function IssueSidebar({ issues, selectedIssueId, onSelectIssue, onStatusChange }) {
   const high = issues.filter((i) => String(i.severity || '').toLowerCase() === 'high').length
   const medium = issues.filter((i) => String(i.severity || '').toLowerCase() === 'medium').length
   const low = issues.filter((i) => String(i.severity || '').toLowerCase() === 'low').length
@@ -25,6 +25,7 @@ export function IssueSidebar({ issues, selectedIssueId, onSelectIssue }) {
                 index={index}
                 selected={selectedIssueId === id}
                 onClick={onSelectIssue}
+                onStatusChange={onStatusChange}
               />
             )
           })

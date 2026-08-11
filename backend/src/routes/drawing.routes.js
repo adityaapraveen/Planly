@@ -3,6 +3,7 @@ import express from 'express'
 import { requireAuth } from '../middlewares/requireAuth.js'
 
 import { uploadDrawing } from '../middlewares/upload.middleware.js'
+import { uploadRateLimit } from '../middlewares/rateLimits.js'
 
 import {
     deleteProjectDrawingController,
@@ -16,6 +17,7 @@ export const drawingRouter =
 drawingRouter.use(requireAuth)
 
 drawingRouter.route('/:projectId/drawings').post(
+        uploadRateLimit,
         uploadDrawing.single('drawing'),
         uploadDrawingController
     )

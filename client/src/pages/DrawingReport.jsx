@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertCircle, RefreshCcw } from 'lucide-react'
 import { getDrawingReport } from '../api/drawings.api'
-import { getDrawingAnalysis, triggerDrawingAnalysis } from '../api/analysis.api'
+import {
+  getDrawingAnalysis,
+  triggerDrawingAnalysis,
+  updateAnalysisIssue,
+} from '../api/analysis.api'
 import { StatusBadge } from '../components/analysis/StatusBadge'
 import { AnalysisLoader } from '../components/analysis/AnalysisLoader'
 import { AnalysisSummary } from '../components/analysis/AnalysisSummary'
@@ -26,18 +30,20 @@ function normalizeIssues(issues) {
   return Array.isArray(issues) ? issues : []
 }
 
+function toApiUrl(rawPath) {
+  if (!rawPath) return ''
+  if (/^https?:\/\//i.test(rawPath)) return rawPath
+
+  const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`
+  const safeBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
+  return `${safeBase}${normalizedPath}`
+}
+
 function mapPages(pages) {
   return (pages || []).map((page) => {
-    if (page.imageUrl) {
-      return page
-    }
-
-    const rawPath = page.imagePath || ''
-    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`
-    const safeBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
     return {
       ...page,
-      imageUrl: `${safeBase}${normalizedPath}`,
+      imageUrl: toApiUrl(page.imageUrl || page.imagePath),
     }
   })
 }
@@ -55,7 +61,7 @@ export function DrawingReport() {
 
   const fetchReport = useCallback(async () => {
     const res = await getDrawingReport(drawingId)
-    setDrawing(res.data?.drawing || null)
+    return res.data?.drawing || null
   }, [drawingId])
 
   const fetchAnalysisForMode = useCallback(async (mode) => {
@@ -68,6 +74,19 @@ export function DrawingReport() {
     }
   }, [drawingId])
 
+  const loadDrawing = useCallback(async (mode) => {
+    const [report, modeAnalysis] = await Promise.all([
+      fetchReport(),
+      fetchAnalysisForMode(mode),
+    ])
+
+    const nextDrawing = report
+      ? { ...report, analysis: modeAnalysis }
+      : null
+    setDrawing(nextDrawing)
+    return nextDrawing
+  }, [fetchAnalysisForMode, fetchReport])
+
   useEffect(() => {
     let active = true
 
@@ -75,15 +94,7 @@ export function DrawingReport() {
       setLoading(true)
       setError('')
       try {
-        await fetchReport()
-        const modeAnalysis = await fetchAnalysisForMode(reviewMode)
-        setDrawing((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            analysis: modeAnalysis,
-          }
-        })
+        await loadDrawing(reviewMode)
       } catch (err) {
         if (active) setError(err.message || 'Failed to load drawing report')
       } finally {
@@ -95,72 +106,37 @@ export function DrawingReport() {
     return () => {
       active = false
     }
-  }, [fetchAnalysisForMode, fetchReport, reviewMode])
-
-  useEffect(() => {
-    let active = true
-    async function loadModeAnalysis() {
-      setError('')
-      try {
-        const modeAnalysis = await fetchAnalysisForMode(reviewMode)
-        if (!active) return
-        setDrawing((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            analysis: modeAnalysis,
-          }
-        })
-      } catch (err) {
-        if (active) setError(err.message || 'Failed to load analysis')
-      }
-    }
-    loadModeAnalysis()
-    return () => {
-      active = false
-    }
-  }, [fetchAnalysisForMode, reviewMode])
+  }, [loadDrawing, reviewMode])
 
   useEffect(() => {
     if (!drawing) return
-    if (drawing.status === 'COMPLETED' || drawing.status === 'FAILED') return
+    const analysisStatus = drawing.analysis?.status
+    if (analysisStatus !== 'PENDING' && analysisStatus !== 'PROCESSING') return
 
     const timer = setInterval(async () => {
       try {
-        await fetchReport()
-        if (drawing.status === 'COMPLETED') {
-          const modeAnalysis = await fetchAnalysisForMode(reviewMode)
-          setDrawing((prev) => {
-            if (!prev) return prev
-            return {
-              ...prev,
-              analysis: modeAnalysis,
-            }
-          })
-        }
+        await loadDrawing(reviewMode)
       } catch {
         // keep previous state and continue polling
       }
     }, POLL_MS)
 
     return () => clearInterval(timer)
-  }, [drawing, fetchAnalysisForMode, fetchReport, reviewMode])
+  }, [drawing, loadDrawing, reviewMode])
 
   const pages = useMemo(() => mapPages(drawing?.pages), [drawing?.pages])
   const issues = useMemo(() => normalizeIssues(drawing?.analysis?.issues), [drawing?.analysis?.issues])
   const pdfUrl = useMemo(() => {
-    const rawPath = drawing?.filePath || ''
-    if (!rawPath) return ''
-    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`
-    const safeBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
-    return `${safeBase}${normalizedPath}`
-  }, [drawing?.filePath])
+    return toApiUrl(drawing?.fileUrl || drawing?.filePath)
+  }, [drawing?.filePath, drawing?.fileUrl])
 
   const handleRetry = async () => {
     try {
       setRetrying(true)
       setError('')
-      const res = await triggerDrawingAnalysis(drawingId, reviewMode)
+      const force = drawing?.analysis?.status === 'FAILED' ||
+        drawing?.analysis?.status === 'COMPLETED'
+      const res = await triggerDrawingAnalysis(drawingId, reviewMode, force)
       const nextStatus = res?.data?.status || 'PENDING'
       const nextAnalysis = res?.data?.analysis
 
@@ -195,6 +171,28 @@ export function DrawingReport() {
     }
   }
 
+  const handleIssueStatusChange = async (issue, nextStatus) => {
+    try {
+      setError('')
+      const res = await updateAnalysisIssue(issue.id, nextStatus)
+      const updatedIssue = res.data?.issue
+
+      setDrawing((prev) => {
+        if (!prev?.analysis || !updatedIssue) return prev
+        return {
+          ...prev,
+          analysis: {
+            ...prev.analysis,
+            issues: prev.analysis.issues.map((item) =>
+              item.id === updatedIssue.id ? updatedIssue : item),
+          },
+        }
+      })
+    } catch (err) {
+      setError(err.message || 'Failed to update finding status')
+    }
+  }
+
   const registerPageRef = (pageNumber, node) => {
     if (node) {
       pageRefs.current[pageNumber] = node
@@ -208,7 +206,7 @@ export function DrawingReport() {
       <div className="report-state">
         <AlertCircle size={18} />
         <p>{error}</p>
-        <Button onClick={fetchReport}>Retry</Button>
+        <Button onClick={() => loadDrawing(reviewMode)}>Retry</Button>
       </div>
     )
   }
@@ -221,7 +219,7 @@ export function DrawingReport() {
     )
   }
 
-  const status = drawing.status
+  const status = drawing.analysis?.status || 'NOT_STARTED'
 
   return (
     <div className="drawing-report-page">
@@ -246,6 +244,11 @@ export function DrawingReport() {
             </select>
           </label>
           <StatusBadge status={status} />
+          {status === 'COMPLETED' && (
+            <Button variant="secondary" onClick={handleRetry} disabled={retrying}>
+              <RefreshCcw size={14} /> {retrying ? 'Starting…' : 'Run Again'}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -268,7 +271,14 @@ export function DrawingReport() {
         </div>
       )}
 
-      {status === 'FAILED' ? (
+      {status === 'NOT_STARTED' ? (
+        <div className="report-state">
+          <p>No {REVIEW_MODE_OPTIONS.find((item) => item.value === reviewMode)?.label} analysis has been run yet.</p>
+          <Button onClick={handleRetry} disabled={retrying}>
+            {retrying ? 'Starting…' : 'Run Analysis'}
+          </Button>
+        </div>
+      ) : status === 'FAILED' ? (
         <div className="report-state failed">
           <p>Analysis failed for this drawing in {REVIEW_MODE_OPTIONS.find((item) => item.value === reviewMode)?.label}.</p>
           <Button onClick={handleRetry} disabled={retrying}>
@@ -295,6 +305,7 @@ export function DrawingReport() {
               issues={issues}
               selectedIssueId={selectedIssueId}
               onSelectIssue={handleSelectIssue}
+              onStatusChange={handleIssueStatusChange}
             />
           </div>
         </>

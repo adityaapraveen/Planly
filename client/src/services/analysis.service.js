@@ -1,9 +1,9 @@
 import { apiFetch } from './api'
 
-export async function analyzeDrawing(drawingId, reviewMode = 'SUBMISSION_READINESS') {
+export async function analyzeDrawing(drawingId, reviewMode = 'SUBMISSION_READINESS', force = false) {
   return apiFetch(`/api/drawings/${drawingId}/analyze`, {
     method: 'POST',
-    body: { reviewMode },
+    body: { reviewMode, force },
   })
 }
 

@@ -50,7 +50,7 @@ export function FileUpload({ onFileSelect, accept = '.pdf', uploading = false })
         <Upload size={22} />
       </div>
       <h4>Drop a PDF drawing here, or click to browse</h4>
-      <p>PDF files up to 2MB</p>
+      <p>PDF files up to 20MB</p>
       {selectedFile && (
         <div className="file-upload-selected">
           <FileCheck size={14} />

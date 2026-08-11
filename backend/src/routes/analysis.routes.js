@@ -3,9 +3,11 @@ import { requireAuth } from '../middlewares/requireAuth.js'
 
 import {
     analyzeDrawingController,
-    getDrawingAnalysisController
+    getDrawingAnalysisController,
+    updateAnalysisIssueController
 } from '../controllers/analysis.controller.js'
 import { getDrawingReportController } from '../controllers/drawing.controller.js'
+import { analysisRateLimit } from '../middlewares/rateLimits.js'
 
 export const analysisRouter = express.Router()
 
@@ -13,12 +15,18 @@ analysisRouter.use(requireAuth)
 
 analysisRouter.post(
     '/drawings/:drawingId/analyze',
+    analysisRateLimit,
     analyzeDrawingController
 )
 
 analysisRouter.get(
     '/drawings/:drawingId/analysis',
     getDrawingAnalysisController
+)
+
+analysisRouter.patch(
+    '/analysis/issues/:issueId',
+    updateAnalysisIssueController
 )
 
 analysisRouter.get(
