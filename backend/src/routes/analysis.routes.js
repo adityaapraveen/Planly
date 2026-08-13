@@ -4,7 +4,8 @@ import { requireAuth } from '../middlewares/requireAuth.js'
 import {
     analyzeDrawingController,
     getDrawingAnalysisController,
-    updateAnalysisIssueController
+    updateAnalysisIssueController,
+    updateSheetMetadataController
 } from '../controllers/analysis.controller.js'
 import { getDrawingReportController } from '../controllers/drawing.controller.js'
 import { analysisRateLimit } from '../middlewares/rateLimits.js'
@@ -27,6 +28,11 @@ analysisRouter.get(
 analysisRouter.patch(
     '/analysis/issues/:issueId',
     updateAnalysisIssueController
+)
+
+analysisRouter.patch(
+    '/sheets/:sheetId',
+    updateSheetMetadataController
 )
 
 analysisRouter.get(

@@ -14,6 +14,11 @@ import {
     parsePageAnalysis,
     serializeIssue
 } from './analysis-result.js'
+import {
+    extractionToSheetData,
+    shouldRefreshExtractedSheet
+} from './sheet-index.service.js'
+import { resolveSheetReferences } from './sheet-reference.service.js'
 
 const analysisInclude = {
     issues: {
@@ -172,7 +177,7 @@ export const requestDrawingAnalysis = async ({
             issuesSnapshot: [],
             provider,
             model,
-            promptVersion: config.AI_PROMPT_VERSION
+            promptVersion: `${config.AI_PROMPT_VERSION}:sheet-graph-v1`
         },
         include: analysisInclude
     })
@@ -287,6 +292,59 @@ export const processAnalysisRun = async ({ analysisId, userId }) => {
         const durationMs = Date.now() - startedAt
 
         const completedAnalysis = await prisma.$transaction(async (tx) => {
+            for (const pageResult of pageResults) {
+                const page = pages.find((candidate) =>
+                    candidate.pageNumber === pageResult.pageNumber
+                )
+                if (!page) continue
+
+                const sheetData = extractionToSheetData(
+                    pageResult.sheetMetadata
+                )
+                const existingSheet = await tx.sheet.findUnique({
+                    where: { pageId: page.id },
+                    select: { id: true, reviewStatus: true }
+                })
+
+                if (!existingSheet) {
+                    await tx.sheet.create({
+                        data: {
+                            ...sheetData,
+                            pageId: page.id
+                        }
+                    })
+                } else if (shouldRefreshExtractedSheet(
+                    existingSheet.reviewStatus
+                )) {
+                    await tx.sheet.update({
+                        where: { id: existingSheet.id },
+                        data: sheetData
+                    })
+                }
+            }
+
+            const indexedPages = await tx.drawingPage.findMany({
+                where: { drawingId: run.drawingId },
+                orderBy: { pageNumber: 'asc' },
+                include: { sheet: true }
+            })
+            const resolvedReferences = resolveSheetReferences({
+                pages: indexedPages,
+                pageResults
+            })
+
+            await tx.sheetReference.deleteMany({
+                where: {
+                    sourcePage: { drawingId: run.drawingId }
+                }
+            })
+
+            if (resolvedReferences.length > 0) {
+                await tx.sheetReference.createMany({
+                    data: resolvedReferences
+                })
+            }
+
             await tx.analysisIssue.deleteMany({
                 where: { analysisId: run.id }
             })

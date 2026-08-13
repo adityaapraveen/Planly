@@ -388,6 +388,8 @@ Goal: understand a full issue set before attempting deeper reasoning.
 
 ### P1.1 Sheet ingestion and correction
 
+Implementation status as of August 13, 2026: the first vertical slice is implemented. Page-level vision analysis now extracts sheet number, title, discipline, revision, and issue date with confidence and evidence; users can correct or confirm the result; corrections survive reruns; and deterministic missing/duplicate-number diagnostics are available. Drawing-set entities, reusable title-block templates, richer sequence rules, and normalized revision history remain open.
+
 - Split multi-sheet PDFs.
 - OCR sheet number, title, revision, discipline, date, and project metadata.
 - Detect title-block regions and reusable templates.
@@ -397,6 +399,8 @@ Goal: understand a full issue set before attempting deeper reasoning.
 - Persist normalized `DrawingSet`, `Sheet`, and `SheetRevision` entities.
 
 ### P1.2 Sheet graph
+
+Implementation status as of August 13, 2026: the first vertical slice is implemented. Page analysis extracts visible detail, section, elevation, schedule, plan, and general sheet references with confidence, evidence, and callout location. Persisted edges resolve against the human-correctable sheet index and flag missing, ambiguous, or low-confidence targets. Correcting sheet metadata reconciles the graph immediately without another model call. Symbol-specific extraction evaluation, circular-reference analysis, schedule/tag linking, and richer spatial/project entities remain open.
 
 - Detect plan, section, elevation, detail, schedule, and legend types.
 - Extract and link callouts.

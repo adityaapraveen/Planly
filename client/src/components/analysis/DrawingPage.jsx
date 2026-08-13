@@ -1,6 +1,16 @@
 import { IssueOverlay } from './IssueOverlay'
+import { ReferenceOverlay } from './ReferenceOverlay'
 
-export function DrawingPage({ page, pageIssues, selectedIssueId, onSelectIssue, pageRef }) {
+export function DrawingPage({
+  page,
+  pageIssues,
+  pageReferences,
+  selectedIssueId,
+  selectedReferenceId,
+  onSelectIssue,
+  onSelectReference,
+  pageRef,
+}) {
   return (
     <section className="drawing-page" ref={pageRef} id={`drawing-page-${page.pageNumber}`}>
       <div className="drawing-page-label">Page {page.pageNumber}</div>
@@ -23,6 +33,14 @@ export function DrawingPage({ page, pageIssues, selectedIssueId, onSelectIssue, 
             />
           )
         })}
+        {pageReferences.map((reference) => (
+          <ReferenceOverlay
+            key={reference.id}
+            reference={reference}
+            selected={reference.id === selectedReferenceId}
+            onClick={onSelectReference}
+          />
+        ))}
       </div>
     </section>
   )
