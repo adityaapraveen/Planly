@@ -16,6 +16,9 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - AI-extracted sheet number, title, discipline, revision, and issue date with field-level confidence and evidence.
 - Human-correctable sheet index whose confirmed data survives later AI reruns.
 - Deterministic missing and duplicate sheet-number diagnostics.
+- Cross-sheet detail, section, elevation, schedule, and plan reference extraction.
+- A cited sheet-reference graph with resolved, missing, ambiguous, and low-confidence states.
+- Clickable callout overlays that connect graph diagnostics to visible drawing evidence.
 - Five review modes:
   - Submission readiness
   - Documentation review
@@ -219,10 +222,12 @@ To force a new versioned run:
 5. Each page is reviewed using the selected mode.
 6. The model response must satisfy the structured contract.
 7. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
-8. Findings are normalized and persisted as relational `AnalysisIssue` records.
-9. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
-10. The client polls only while the selected run is pending or processing.
-11. A reviewer corrects the sheet index and confirms, resolves, or dismisses each finding.
+8. Visible callouts are persisted as graph edges and resolved against the corrected sheet index.
+9. Missing, ambiguous, and low-confidence reference targets are classified deterministically.
+10. Findings are normalized and persisted as relational `AnalysisIssue` records.
+11. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
+12. The client polls only while the selected run is pending or processing.
+13. A reviewer corrects the sheet index, inspects cited graph edges, and confirms, resolves, or dismisses each finding.
 
 Malformed model output fails the run. It is never silently converted into a successful report with no findings.
 

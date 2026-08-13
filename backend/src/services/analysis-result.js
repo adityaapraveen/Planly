@@ -37,10 +37,35 @@ const sheetMetadataSchema = z.object({
     titleBlockLocation: locationSchema
 })
 
+const sheetReferenceSchema = z.object({
+    referenceType: z.enum([
+        'DETAIL',
+        'SECTION',
+        'ELEVATION',
+        'SCHEDULE',
+        'PLAN',
+        'GENERAL',
+        'OTHER'
+    ]),
+    label: z.string().trim().min(1).max(240),
+    detailNumber: z.union([
+        z.string(),
+        z.number().finite().transform(String)
+    ]).pipe(z.string().trim().max(100)).nullable(),
+    targetSheetNumber: z.union([
+        z.string(),
+        z.number().finite().transform(String)
+    ]).pipe(z.string().trim().min(1).max(100)),
+    confidence: z.coerce.number().finite().min(0).max(1),
+    evidence: z.string().trim().min(1).max(1000),
+    location: locationSchema
+})
+
 const pageAnalysisSchema = z.object({
     score: z.coerce.number().finite().min(0).max(100),
     summary: z.string().trim().min(1).max(4000),
     sheetMetadata: sheetMetadataSchema,
+    sheetReferences: z.array(sheetReferenceSchema).max(250),
     issues: z.array(issueSchema).max(100)
 })
 
@@ -107,10 +132,26 @@ export const parsePageAnalysis = (value, expectedPageNumber) => {
             .map(([key, value]) => [key, clamp01(value)])
     )
 
+    const sheetReferences = result.data.sheetReferences.map((reference) => {
+        const location = Object.fromEntries(
+            Object.entries(reference.location)
+                .map(([key, value]) => [key, clamp01(value)])
+        )
+
+        return {
+            ...reference,
+            detailNumber: reference.detailNumber?.trim() || null,
+            targetSheetNumber: reference.targetSheetNumber.trim(),
+            location,
+            hasLocation: location.width > 0 && location.height > 0
+        }
+    })
+
     return {
         score: result.data.score,
         summary: result.data.summary,
         sheetMetadata,
+        sheetReferences,
         issues: result.data.issues.map((issue) => {
             const location = {
                 x: clamp01(issue.location.x),

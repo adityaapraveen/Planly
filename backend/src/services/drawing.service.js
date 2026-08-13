@@ -7,6 +7,7 @@ import {
 import { createSignedAssetUrl } from '../utils/asset-url.js'
 import { serializeAnalysis } from './analysis.service.js'
 import { createSheetIndex } from './sheet-index.service.js'
+import { createReferenceGraph } from './sheet-reference.service.js'
 
 const DRAWING_PAGES_TABLE = 'public.drawing_pages'
 
@@ -159,6 +160,7 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
     }
 
     let pages = []
+    let sheetReferences = []
 
     try {
         pages = await prisma.drawingPage.findMany({
@@ -169,6 +171,23 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
                 pageNumber: 'asc'
             },
             include: { sheet: true }
+        })
+        sheetReferences = await prisma.sheetReference.findMany({
+            where: {
+                sourcePage: { drawingId }
+            },
+            orderBy: [
+                { sourcePage: { pageNumber: 'asc' } },
+                { createdAt: 'asc' }
+            ],
+            include: {
+                sourcePage: {
+                    include: { sheet: true }
+                },
+                targetSheet: {
+                    include: { page: true }
+                }
+            }
         })
     } catch (error) {
         if (!isMissingDrawingPagesTableError(error)) {
@@ -210,6 +229,7 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
         analysis: serializeAnalysis(drawing.analyses?.[0]),
         fileUrl,
         pages: normalizedPages,
-        sheetIndex: createSheetIndex(pages)
+        sheetIndex: createSheetIndex(pages),
+        referenceGraph: createReferenceGraph(sheetReferences)
     }
 }

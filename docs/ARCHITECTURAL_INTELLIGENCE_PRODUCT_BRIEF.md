@@ -400,6 +400,8 @@ Implementation status as of August 13, 2026: the first vertical slice is impleme
 
 ### P1.2 Sheet graph
 
+Implementation status as of August 13, 2026: the first vertical slice is implemented. Page analysis extracts visible detail, section, elevation, schedule, plan, and general sheet references with confidence, evidence, and callout location. Persisted edges resolve against the human-correctable sheet index and flag missing, ambiguous, or low-confidence targets. Correcting sheet metadata reconciles the graph immediately without another model call. Symbol-specific extraction evaluation, circular-reference analysis, schedule/tag linking, and richer spatial/project entities remain open.
+
 - Detect plan, section, elevation, detail, schedule, and legend types.
 - Extract and link callouts.
 - Identify broken, ambiguous, or circular references.

@@ -42,6 +42,20 @@ const validResult = {
             height: 0.4
         }
     },
+    sheetReferences: [{
+        referenceType: 'DETAIL',
+        label: '3/A501',
+        detailNumber: 3,
+        targetSheetNumber: 'A501',
+        confidence: 0.92,
+        evidence: 'Detail callout reads 3/A501.',
+        location: {
+            x: 0.4,
+            y: 0.5,
+            width: 0.08,
+            height: 0.04
+        }
+    }],
     issues: [{
         title: 'Door conflicts with circulation path',
         category: 'Coordination',
@@ -68,6 +82,8 @@ test('parsePageAnalysis validates and normalizes model output', () => {
     assert.equal(result.sheetMetadata.sheetNumber.value, 'A101')
     assert.equal(result.sheetMetadata.titleBlockLocation.width, 0.3)
     assert.equal(result.sheetMetadata.titleBlockLocation.height, 0.4)
+    assert.equal(result.sheetReferences[0].detailNumber, '3')
+    assert.equal(result.sheetReferences[0].targetSheetNumber, 'A501')
 })
 
 test('parsePageAnalysis rejects malformed output instead of returning no issues', () => {

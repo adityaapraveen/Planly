@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import { DrawingPage } from './DrawingPage'
 
-export function DrawingViewer({ pages, issues, selectedIssueId, onSelectIssue, registerPageRef, pdfUrl }) {
+export function DrawingViewer({
+  pages,
+  issues,
+  references,
+  selectedIssueId,
+  selectedReferenceId,
+  onSelectIssue,
+  onSelectReference,
+  registerPageRef,
+  pdfUrl,
+}) {
   if (!pages || pages.length === 0) {
     return <PdfFallbackViewer pdfUrl={pdfUrl} />
   }
@@ -10,13 +20,19 @@ export function DrawingViewer({ pages, issues, selectedIssueId, onSelectIssue, r
     <div className="drawing-viewer">
       {pages.map((page) => {
         const pageIssues = issues.filter((issue) => Number(issue.page || 1) === Number(page.pageNumber))
+        const pageReferences = references.filter((reference) =>
+          Number(reference.source?.pageNumber) === Number(page.pageNumber)
+        )
         return (
           <DrawingPage
             key={page.id || page.pageNumber}
             page={page}
             pageIssues={pageIssues}
+            pageReferences={pageReferences}
             selectedIssueId={selectedIssueId}
+            selectedReferenceId={selectedReferenceId}
             onSelectIssue={onSelectIssue}
+            onSelectReference={onSelectReference}
             pageRef={(node) => registerPageRef(page.pageNumber, node)}
           />
         )

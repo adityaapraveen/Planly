@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
+import { reconcileSheetReferences } from './sheet-reference.service.js'
 
 const METADATA_FIELDS = [
     'sheetNumber',
@@ -181,8 +182,39 @@ export const updateSheetMetadata = async ({ userId, sheetId, changes }) => {
         throw new AppError('No sheet metadata changes provided', 400)
     }
 
-    return prisma.sheet.update({
-        where: { id: sheet.id },
-        data
+    return prisma.$transaction(async (tx) => {
+        const updatedSheet = await tx.sheet.update({
+            where: { id: sheet.id },
+            data
+        })
+        const sourcePage = await tx.drawingPage.findUnique({
+            where: { id: sheet.pageId },
+            select: { drawingId: true }
+        })
+        const pages = await tx.drawingPage.findMany({
+            where: { drawingId: sourcePage.drawingId },
+            include: { sheet: true }
+        })
+        const references = await tx.sheetReference.findMany({
+            where: {
+                sourcePage: { drawingId: sourcePage.drawingId }
+            }
+        })
+        const reconciledReferences = reconcileSheetReferences({
+            pages,
+            references
+        })
+
+        for (const reference of reconciledReferences) {
+            await tx.sheetReference.update({
+                where: { id: reference.id },
+                data: {
+                    resolutionStatus: reference.resolutionStatus,
+                    targetSheetId: reference.targetSheetId
+                }
+            })
+        }
+
+        return updatedSheet
     })
 }

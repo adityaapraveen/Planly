@@ -13,6 +13,7 @@ import { AnalysisSummary } from '../components/analysis/AnalysisSummary'
 import { DrawingViewer } from '../components/analysis/DrawingViewer'
 import { IssueSidebar } from '../components/analysis/IssueSidebar'
 import { SheetIndex } from '../components/analysis/SheetIndex'
+import { ReferenceGraph } from '../components/analysis/ReferenceGraph'
 import { Button } from '../components/ui/Button'
 import { PageLoader } from '../components/ui/Spinner'
 import './DrawingReport.css'
@@ -57,6 +58,7 @@ export function DrawingReport() {
   const [drawing, setDrawing] = useState(null)
   const [retrying, setRetrying] = useState(false)
   const [selectedIssueId, setSelectedIssueId] = useState(null)
+  const [selectedReferenceId, setSelectedReferenceId] = useState(null)
   const [interactionMessage, setInteractionMessage] = useState('')
   const [savingSheetId, setSavingSheetId] = useState(null)
   const pageRefs = useRef({})
@@ -128,6 +130,10 @@ export function DrawingReport() {
 
   const pages = useMemo(() => mapPages(drawing?.pages), [drawing?.pages])
   const issues = useMemo(() => normalizeIssues(drawing?.analysis?.issues), [drawing?.analysis?.issues])
+  const references = useMemo(
+    () => drawing?.referenceGraph?.references || [],
+    [drawing?.referenceGraph?.references],
+  )
   const pdfUrl = useMemo(() => {
     return toApiUrl(drawing?.fileUrl || drawing?.filePath)
   }, [drawing?.filePath, drawing?.fileUrl])
@@ -159,6 +165,7 @@ export function DrawingReport() {
 
   const handleSelectIssue = (issue, id) => {
     setInteractionMessage('')
+    setSelectedReferenceId(null)
     setSelectedIssueId(id)
 
     if (issue?.hasLocation === false) {
@@ -198,6 +205,22 @@ export function DrawingReport() {
   const registerPageRef = (pageNumber, node) => {
     if (node) {
       pageRefs.current[pageNumber] = node
+    }
+  }
+
+  const handleSelectReference = (reference) => {
+    setInteractionMessage('')
+    setSelectedIssueId(null)
+    setSelectedReferenceId(reference.id)
+
+    const pageNumber = Number(reference.source?.pageNumber || 1)
+    const node = pageRefs.current[pageNumber]
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    if (reference.hasLocation === false) {
+      setInteractionMessage('This reference has no pinpoint location; its source page has been selected.')
     }
   }
 
@@ -309,6 +332,12 @@ export function DrawingReport() {
         onConfirm={handleConfirmSheet}
       />
 
+      <ReferenceGraph
+        graph={drawing.referenceGraph}
+        selectedReferenceId={selectedReferenceId}
+        onSelectReference={handleSelectReference}
+      />
+
       {status === 'NOT_STARTED' ? (
         <div className="report-state">
           <p>No {REVIEW_MODE_OPTIONS.find((item) => item.value === reviewMode)?.label} analysis has been run yet.</p>
@@ -333,8 +362,11 @@ export function DrawingReport() {
               <DrawingViewer
                 pages={pages}
                 issues={issues}
+                references={references}
                 selectedIssueId={selectedIssueId}
+                selectedReferenceId={selectedReferenceId}
                 onSelectIssue={handleSelectIssue}
+                onSelectReference={handleSelectReference}
                 registerPageRef={registerPageRef}
                 pdfUrl={pdfUrl}
               />

@@ -72,7 +72,8 @@ model DrawingPage {
   drawingId String
   drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
 
-  sheet Sheet?
+  sheet           Sheet?
+  sheetReferences SheetReference[]
 
   createdAt DateTime @default(now())
 
@@ -99,12 +100,49 @@ model Sheet {
   pageId String      @unique
   page   DrawingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
+  incomingReferences SheetReference[] @relation("ReferenceTargetSheet")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([sheetNumber])
   @@index([reviewStatus])
   @@map("sheets")
+}
+
+model SheetReference {
+  id String @id @default(uuid())
+
+  referenceType     SheetReferenceType
+  label             String
+  detailNumber      String?
+  targetSheetNumber String
+  confidence        Float
+  evidence          String
+
+  x           Float
+  y           Float
+  width       Float
+  height      Float
+  hasLocation Boolean @default(true)
+
+  resolutionStatus SheetReferenceResolution
+  metadataVersion  String                   @default("sheet-reference-v1")
+
+  sourcePageId String
+  sourcePage   DrawingPage @relation(fields: [sourcePageId], references: [id], onDelete: Cascade)
+
+  targetSheetId String?
+  targetSheet   Sheet?  @relation("ReferenceTargetSheet", fields: [targetSheetId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourcePageId])
+  @@index([targetSheetId])
+  @@index([resolutionStatus])
+  @@index([targetSheetNumber])
+  @@map("sheet_references")
 }
 
 model Analysis {
@@ -218,4 +256,21 @@ enum SheetReviewStatus {
   NEEDS_REVIEW
   CORRECTED
   CONFIRMED
+}
+
+enum SheetReferenceType {
+  DETAIL
+  SECTION
+  ELEVATION
+  SCHEDULE
+  PLAN
+  GENERAL
+  OTHER
+}
+
+enum SheetReferenceResolution {
+  RESOLVED
+  MISSING_TARGET
+  AMBIGUOUS_TARGET
+  LOW_CONFIDENCE
 }

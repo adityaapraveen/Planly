@@ -18,6 +18,7 @@ import {
     extractionToSheetData,
     shouldRefreshExtractedSheet
 } from './sheet-index.service.js'
+import { resolveSheetReferences } from './sheet-reference.service.js'
 
 const analysisInclude = {
     issues: {
@@ -176,7 +177,7 @@ export const requestDrawingAnalysis = async ({
             issuesSnapshot: [],
             provider,
             model,
-            promptVersion: `${config.AI_PROMPT_VERSION}:sheet-metadata-v1`
+            promptVersion: `${config.AI_PROMPT_VERSION}:sheet-graph-v1`
         },
         include: analysisInclude
     })
@@ -320,6 +321,28 @@ export const processAnalysisRun = async ({ analysisId, userId }) => {
                         data: sheetData
                     })
                 }
+            }
+
+            const indexedPages = await tx.drawingPage.findMany({
+                where: { drawingId: run.drawingId },
+                orderBy: { pageNumber: 'asc' },
+                include: { sheet: true }
+            })
+            const resolvedReferences = resolveSheetReferences({
+                pages: indexedPages,
+                pageResults
+            })
+
+            await tx.sheetReference.deleteMany({
+                where: {
+                    sourcePage: { drawingId: run.drawingId }
+                }
+            })
+
+            if (resolvedReferences.length > 0) {
+                await tx.sheetReference.createMany({
+                    data: resolvedReferences
+                })
             }
 
             await tx.analysisIssue.deleteMany({
