@@ -72,9 +72,39 @@ model DrawingPage {
   drawingId String
   drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
 
+  sheet Sheet?
+
   createdAt DateTime @default(now())
 
   @@map("drawing_pages")
+}
+
+model Sheet {
+  id String @id @default(uuid())
+
+  sheetNumber String?
+  title       String?
+  discipline  String?
+  revision    String?
+  issueDate   String?
+
+  confidence         Float             @default(0)
+  fieldConfidence    Json
+  evidence           Json
+  titleBlockLocation Json?
+  reviewStatus       SheetReviewStatus @default(NEEDS_REVIEW)
+  metadataVersion    String            @default("v1")
+  correctedAt        DateTime?
+
+  pageId String      @unique
+  page   DrawingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sheetNumber])
+  @@index([reviewStatus])
+  @@map("sheets")
 }
 
 model Analysis {
@@ -181,4 +211,11 @@ enum AnalysisIssueStatus {
   ACKNOWLEDGED
   RESOLVED
   DISMISSED
+}
+
+enum SheetReviewStatus {
+  AI_EXTRACTED
+  NEEDS_REVIEW
+  CORRECTED
+  CONFIRMED
 }

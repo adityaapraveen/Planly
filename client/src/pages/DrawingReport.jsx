@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertCircle, RefreshCcw } from 'lucide-react'
-import { getDrawingReport } from '../api/drawings.api'
+import { getDrawingReport, updateSheetMetadata } from '../api/drawings.api'
 import {
   getDrawingAnalysis,
   triggerDrawingAnalysis,
@@ -12,6 +12,7 @@ import { AnalysisLoader } from '../components/analysis/AnalysisLoader'
 import { AnalysisSummary } from '../components/analysis/AnalysisSummary'
 import { DrawingViewer } from '../components/analysis/DrawingViewer'
 import { IssueSidebar } from '../components/analysis/IssueSidebar'
+import { SheetIndex } from '../components/analysis/SheetIndex'
 import { Button } from '../components/ui/Button'
 import { PageLoader } from '../components/ui/Spinner'
 import './DrawingReport.css'
@@ -57,6 +58,7 @@ export function DrawingReport() {
   const [retrying, setRetrying] = useState(false)
   const [selectedIssueId, setSelectedIssueId] = useState(null)
   const [interactionMessage, setInteractionMessage] = useState('')
+  const [savingSheetId, setSavingSheetId] = useState(null)
   const pageRefs = useRef({})
 
   const fetchReport = useCallback(async () => {
@@ -199,6 +201,34 @@ export function DrawingReport() {
     }
   }
 
+  const handleSaveSheet = async (sheetId, changes) => {
+    try {
+      setSavingSheetId(sheetId)
+      setError('')
+      await updateSheetMetadata(sheetId, changes)
+      await loadDrawing(reviewMode)
+      setInteractionMessage('Sheet metadata saved. Human corrections will be preserved on future AI reruns.')
+    } catch (err) {
+      setError(err.message || 'Failed to save sheet metadata')
+    } finally {
+      setSavingSheetId(null)
+    }
+  }
+
+  const handleConfirmSheet = async (sheetId) => {
+    try {
+      setSavingSheetId(sheetId)
+      setError('')
+      await updateSheetMetadata(sheetId, { reviewStatus: 'CONFIRMED' })
+      await loadDrawing(reviewMode)
+      setInteractionMessage('Sheet metadata confirmed.')
+    } catch (err) {
+      setError(err.message || 'Failed to confirm sheet metadata')
+    } finally {
+      setSavingSheetId(null)
+    }
+  }
+
   if (loading) return <PageLoader text="Loading drawing report…" />
 
   if (error && !drawing) {
@@ -270,6 +300,14 @@ export function DrawingReport() {
           <span>{interactionMessage}</span>
         </div>
       )}
+
+      <SheetIndex
+        sheetIndex={drawing.sheetIndex}
+        analysisStatus={status}
+        savingSheetId={savingSheetId}
+        onSave={handleSaveSheet}
+        onConfirm={handleConfirmSheet}
+      />
 
       {status === 'NOT_STARTED' ? (
         <div className="report-state">

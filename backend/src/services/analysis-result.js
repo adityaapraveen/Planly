@@ -19,9 +19,28 @@ const issueSchema = z.object({
     recommendation: z.string().trim().min(1).max(4000)
 })
 
+const metadataFieldSchema = z.object({
+    value: z.union([
+        z.string(),
+        z.number().finite().transform(String)
+    ]).pipe(z.string().trim().max(500)).nullable(),
+    confidence: z.coerce.number().finite().min(0).max(1),
+    evidence: z.string().trim().min(1).max(1000)
+})
+
+const sheetMetadataSchema = z.object({
+    sheetNumber: metadataFieldSchema,
+    title: metadataFieldSchema,
+    discipline: metadataFieldSchema,
+    revision: metadataFieldSchema,
+    issueDate: metadataFieldSchema,
+    titleBlockLocation: locationSchema
+})
+
 const pageAnalysisSchema = z.object({
     score: z.coerce.number().finite().min(0).max(100),
     summary: z.string().trim().min(1).max(4000),
+    sheetMetadata: sheetMetadataSchema,
     issues: z.array(issueSchema).max(100)
 })
 
@@ -60,9 +79,38 @@ export const parsePageAnalysis = (value, expectedPageNumber) => {
         throw error
     }
 
+    const metadataFields = [
+        'sheetNumber',
+        'title',
+        'discipline',
+        'revision',
+        'issueDate'
+    ]
+    const sheetMetadata = metadataFields.reduce((metadata, field) => {
+        const extracted = result.data.sheetMetadata[field]
+        metadata[field] = {
+            value: extracted.value?.trim() || null,
+            confidence: clamp01(extracted.confidence),
+            evidence: extracted.evidence
+        }
+        return metadata
+    }, {})
+
+    const confidences = metadataFields
+        .map((field) => sheetMetadata[field].confidence)
+    sheetMetadata.confidence = confidences.reduce(
+        (sum, confidence) => sum + confidence,
+        0
+    ) / confidences.length
+    sheetMetadata.titleBlockLocation = Object.fromEntries(
+        Object.entries(result.data.sheetMetadata.titleBlockLocation)
+            .map(([key, value]) => [key, clamp01(value)])
+    )
+
     return {
         score: result.data.score,
         summary: result.data.summary,
+        sheetMetadata,
         issues: result.data.issues.map((issue) => {
             const location = {
                 x: clamp01(issue.location.x),

@@ -33,6 +33,39 @@ JSON shape:
 {
   "score": 0,
   "summary": "short page-level summary",
+  "sheetMetadata": {
+    "sheetNumber": {
+      "value": "A101 or null when not visible",
+      "confidence": 0.0,
+      "evidence": "short visible text or reason"
+    },
+    "title": {
+      "value": "FLOOR PLAN or null",
+      "confidence": 0.0,
+      "evidence": "short visible text or reason"
+    },
+    "discipline": {
+      "value": "Architectural or null",
+      "confidence": 0.0,
+      "evidence": "short visible text or reason"
+    },
+    "revision": {
+      "value": "revision identifier or null",
+      "confidence": 0.0,
+      "evidence": "short visible text or reason"
+    },
+    "issueDate": {
+      "value": "date exactly as shown or null",
+      "confidence": 0.0,
+      "evidence": "short visible text or reason"
+    },
+    "titleBlockLocation": {
+      "x": 0.0,
+      "y": 0.0,
+      "width": 0.0,
+      "height": 0.0
+    }
+  },
   "issues": [
     {
       "title": "issue title",
@@ -51,4 +84,12 @@ JSON shape:
     }
   ]
 }
+
+Sheet metadata rules:
+- read values only from visible evidence on this page
+- use null rather than guessing
+- evidence should quote the short visible label/value or explain that it was not found
+- discipline may be inferred from a clear sheet-number prefix only when confidence reflects that inference
+- issueDate must remain exactly as printed; do not invent or normalize an ambiguous date
+- titleBlockLocation must use normalized coordinates and cover the detected title block, or a zero-size box when none is visible
 `

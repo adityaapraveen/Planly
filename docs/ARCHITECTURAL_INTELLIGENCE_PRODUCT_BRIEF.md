@@ -388,6 +388,8 @@ Goal: understand a full issue set before attempting deeper reasoning.
 
 ### P1.1 Sheet ingestion and correction
 
+Implementation status as of August 13, 2026: the first vertical slice is implemented. Page-level vision analysis now extracts sheet number, title, discipline, revision, and issue date with confidence and evidence; users can correct or confirm the result; corrections survive reruns; and deterministic missing/duplicate-number diagnostics are available. Drawing-set entities, reusable title-block templates, richer sequence rules, and normalized revision history remain open.
+
 - Split multi-sheet PDFs.
 - OCR sheet number, title, revision, discipline, date, and project metadata.
 - Detect title-block regions and reusable templates.
