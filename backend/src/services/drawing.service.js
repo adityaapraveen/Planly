@@ -6,6 +6,7 @@ import {
 } from './local-storage.service.js'
 import { createSignedAssetUrl } from '../utils/asset-url.js'
 import { serializeAnalysis } from './analysis.service.js'
+import { createSheetIndex } from './sheet-index.service.js'
 
 const DRAWING_PAGES_TABLE = 'public.drawing_pages'
 
@@ -166,7 +167,8 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
             },
             orderBy: {
                 pageNumber: 'asc'
-            }
+            },
+            include: { sheet: true }
         })
     } catch (error) {
         if (!isMissingDrawingPagesTableError(error)) {
@@ -174,18 +176,22 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
         }
     }
 
-    const normalizedPages = pages.map((page) => ({
-        id: page.id,
-        drawingId: page.drawingId,
-        pageNumber: page.pageNumber,
-        imageName: page.imageName,
-        createdAt: page.createdAt,
-        imageUrl: createSignedAssetUrl({
-            drawingId: drawing.id,
-            assetType: 'page',
-            pageNumber: page.pageNumber
-        })
-    }))
+    const normalizedPages = pages.map((page) => {
+        const normalized = {
+            id: page.id,
+            drawingId: page.drawingId,
+            pageNumber: page.pageNumber,
+            imageName: page.imageName,
+            createdAt: page.createdAt,
+            imageUrl: createSignedAssetUrl({
+                drawingId: drawing.id,
+                assetType: 'page',
+                pageNumber: page.pageNumber
+            })
+        }
+
+        return normalized
+    })
 
     const fileUrl = createSignedAssetUrl({
         drawingId: drawing.id,
@@ -203,6 +209,7 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
         updatedAt: drawing.updatedAt,
         analysis: serializeAnalysis(drawing.analyses?.[0]),
         fileUrl,
-        pages: normalizedPages
+        pages: normalizedPages,
+        sheetIndex: createSheetIndex(pages)
     }
 }

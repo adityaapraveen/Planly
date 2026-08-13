@@ -13,6 +13,9 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - Project and drawing management.
 - PDF signature validation and a 20 MB upload limit.
 - Page-by-page drawing rendering and vision analysis.
+- AI-extracted sheet number, title, discipline, revision, and issue date with field-level confidence and evidence.
+- Human-correctable sheet index whose confirmed data survives later AI reruns.
+- Deterministic missing and duplicate sheet-number diagnostics.
 - Five review modes:
   - Submission readiness
   - Documentation review
@@ -193,6 +196,7 @@ All project and analysis routes require a bearer access token unless noted.
 | `POST` | `/api/drawings/:drawingId/analyze` | Start or rerun a review mode |
 | `GET` | `/api/drawings/:drawingId/analysis` | Get the latest run for a mode |
 | `GET` | `/api/drawings/:drawingId/report` | Get drawing, pages, and signed URLs |
+| `PATCH` | `/api/sheets/:sheetId` | Correct or confirm extracted sheet metadata |
 | `PATCH` | `/api/analysis/issues/:issueId` | Update human review status |
 | `GET` | `/api/assets/...` | Read an asset using an expiring signature |
 | `GET` | `/api/v1/health` | Health check; public |
@@ -214,10 +218,11 @@ To force a new versioned run:
 4. The PDF is split into reusable rendered pages.
 5. Each page is reviewed using the selected mode.
 6. The model response must satisfy the structured contract.
-7. Findings are normalized and persisted as relational `AnalysisIssue` records.
-8. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
-9. The client polls only while the selected run is pending or processing.
-10. A reviewer confirms, resolves, or dismisses each finding.
+7. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
+8. Findings are normalized and persisted as relational `AnalysisIssue` records.
+9. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
+10. The client polls only while the selected run is pending or processing.
+11. A reviewer corrects the sheet index and confirms, resolves, or dismisses each finding.
 
 Malformed model output fails the run. It is never silently converted into a successful report with no findings.
 

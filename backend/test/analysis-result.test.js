@@ -9,6 +9,39 @@ import {
 const validResult = {
     score: 80,
     summary: 'One visible coordination issue.',
+    sheetMetadata: {
+        sheetNumber: {
+            value: ' A101 ',
+            confidence: 0.96,
+            evidence: 'Title block reads A101.'
+        },
+        title: {
+            value: 'Ground Floor Plan',
+            confidence: 0.91,
+            evidence: 'Title block reads Ground Floor Plan.'
+        },
+        discipline: {
+            value: 'Architectural',
+            confidence: 0.85,
+            evidence: 'A-prefix and architectural plan content.'
+        },
+        revision: {
+            value: null,
+            confidence: 0.2,
+            evidence: 'No revision identifier was visible.'
+        },
+        issueDate: {
+            value: '08/13/2026',
+            confidence: 0.88,
+            evidence: 'Issue date in title block.'
+        },
+        titleBlockLocation: {
+            x: 0.75,
+            y: 0.7,
+            width: 0.3,
+            height: 0.4
+        }
+    },
     issues: [{
         title: 'Door conflicts with circulation path',
         category: 'Coordination',
@@ -32,6 +65,9 @@ test('parsePageAnalysis validates and normalizes model output', () => {
     assert.equal(result.issues[0].page, 2)
     assert.equal(result.issues[0].hasLocation, true)
     assert.equal(result.summary, validResult.summary)
+    assert.equal(result.sheetMetadata.sheetNumber.value, 'A101')
+    assert.equal(result.sheetMetadata.titleBlockLocation.width, 0.3)
+    assert.equal(result.sheetMetadata.titleBlockLocation.height, 0.4)
 })
 
 test('parsePageAnalysis rejects malformed output instead of returning no issues', () => {
