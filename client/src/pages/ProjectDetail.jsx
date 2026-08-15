@@ -11,6 +11,7 @@ import { ErrorState } from '../components/ui/ErrorState'
 import { EmptyState } from '../components/ui/EmptyState'
 import { DrawingCard } from '../components/features/DrawingCard'
 import { FileUpload } from '../components/features/FileUpload'
+import { ProjectIntelligence } from '../components/features/ProjectIntelligence'
 import './ProjectDetail.css'
 
 export function ProjectDetail() {
@@ -75,6 +76,8 @@ export function ProjectDetail() {
           </Button>
         </div>
       </div>
+
+      <ProjectIntelligence projectId={projectId} />
 
       <div className="project-detail-section">
         <div className="project-detail-section-header">

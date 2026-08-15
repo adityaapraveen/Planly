@@ -47,6 +47,7 @@ const envSchema = z.object({
         .default(0),
     AI_PROMPT_VERSION: z.string().trim().min(1).default('v1'),
     ANALYSIS_DAILY_LIMIT: z.coerce.number().int().positive().default(25),
+    AI_QUESTION_DAILY_LIMIT: z.coerce.number().int().positive().default(50),
     ASSET_URL_TTL_SECONDS: z.coerce
         .number()
         .int()
@@ -86,6 +87,7 @@ export const config = {
     AI_MAX_RETRIES: parsed.data.AI_MAX_RETRIES,
     AI_PROMPT_VERSION: parsed.data.AI_PROMPT_VERSION,
     ANALYSIS_DAILY_LIMIT: parsed.data.ANALYSIS_DAILY_LIMIT,
+    AI_QUESTION_DAILY_LIMIT: parsed.data.AI_QUESTION_DAILY_LIMIT,
     ASSET_URL_TTL_SECONDS: parsed.data.ASSET_URL_TTL_SECONDS
 
 }

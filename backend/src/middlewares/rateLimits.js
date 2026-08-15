@@ -34,3 +34,8 @@ export const analysisRateLimit = createLimiter({
     windowMs: 60 * 60 * 1000,
     limit: 30
 })
+
+export const questionRateLimit = createLimiter({
+    windowMs: 60 * 60 * 1000,
+    limit: 60
+})
