@@ -410,6 +410,8 @@ Implementation status as of August 13, 2026: the first vertical slice is impleme
 
 ### P1.3 Search and cited set questions
 
+Implementation status as of August 15, 2026: the first vertical slice is implemented. Users can search current sheet metadata, findings, and references across a project, then ask bounded-context questions. Answers persist the evidence snapshot, provider/model metadata, confidence, and sheet/page/region citations. Unknown citations and uncited substantive answers are rejected, while empty projects return insufficient evidence without a provider call. Full drawing OCR, symbol search, vector retrieval, hybrid ranking evaluation, streaming, and question-to-revision comparison remain open.
+
 - Search text, symbols, sheet metadata, findings, and references.
 - Ask questions across the set.
 - Every answer links to sheet and bounding region.
@@ -423,6 +425,8 @@ Success signal: reviewers can locate information and understand set structure su
 Goal: replace deadline-only redlining with repeatable, evidence-backed review.
 
 ### P2.1 Check framework
+
+Implementation status as of August 15, 2026: the first deterministic check-library slice is implemented. Six documented, versioned checks cover missing and duplicate sheet numbers, broken and ambiguous references, and low-confidence metadata/references. Each project can enable or disable a check and change its severity; live results include cited sheet/page/region evidence. Organization libraries, custom check authoring, AI check definitions, templates, preview datasets, rollback, and persisted run history remain open.
 
 - Deterministic checks for metadata, references, numbering, duplicates, and schedule consistency.
 - AI checks for ambiguity, completeness, coordination risk, and constructability.

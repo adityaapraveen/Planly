@@ -30,12 +30,53 @@ model Project {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  drawings Drawing[]
+  drawings      Drawing[]
+  questions     ProjectQuestion[]
+  checkSettings ProjectCheckSetting[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("projects")
+}
+
+model ProjectQuestion {
+  id               String                @id @default(uuid())
+  question         String
+  answer           String
+  status           ProjectQuestionStatus
+  confidence       Float
+  citations        Json
+  evidenceSnapshot Json
+  provider         String?
+  model            String?
+  promptVersion    String                @default("cited-project-qa-v1")
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@map("project_questions")
+}
+
+model ProjectCheckSetting {
+  id       String        @id @default(uuid())
+  checkKey String
+  enabled  Boolean       @default(true)
+  severity CheckSeverity
+  version  String        @default("v1")
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, checkKey])
+  @@index([projectId, enabled])
+  @@map("project_check_settings")
 }
 
 model Drawing {
@@ -273,4 +314,15 @@ enum SheetReferenceResolution {
   MISSING_TARGET
   AMBIGUOUS_TARGET
   LOW_CONFIDENCE
+}
+
+enum ProjectQuestionStatus {
+  ANSWERED
+  INSUFFICIENT_EVIDENCE
+}
+
+enum CheckSeverity {
+  LOW
+  MEDIUM
+  HIGH
 }
