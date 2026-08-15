@@ -16,6 +16,14 @@
 .project-detail-section-header h2 { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); }
 .drawings-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .drawing-detail-panel { margin-top: var(--space-6); }
+.project-upload-error { margin-bottom: var(--space-4); }
+.revision-upload-field { margin-bottom: var(--space-5); }
+.revision-upload-field > label { display: block; margin-bottom: 7px; color: var(--neutral-700); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.revision-upload-select-wrap { position: relative; display: flex; align-items: center; }
+.revision-upload-select-wrap > svg { position: absolute; left: 12px; z-index: 1; color: var(--primary-600); pointer-events: none; }
+.revision-upload-select-wrap select { width: 100%; min-height: 42px; padding: 0 36px; color: var(--neutral-700); background: white; border: 1px solid var(--neutral-200); border-radius: var(--radius-md); outline: none; }
+.revision-upload-select-wrap select:focus { border-color: var(--primary-500); box-shadow: 0 0 0 3px var(--primary-100); }
+.revision-upload-field p { margin-top: 6px; color: var(--neutral-500); font-size: var(--font-size-xs); }
 
 .project-intelligence-section {
   display: flex;

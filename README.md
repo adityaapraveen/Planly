@@ -23,6 +23,9 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - Evidence-grounded drawing-set questions with persisted answers, confidence, and sheet/page citations.
 - Explicit insufficient-evidence behavior and rejection of invented AI citations.
 - A versioned, project-configurable deterministic check library with live pass/fail results.
+- Drawing revision relationships with deterministic sheet and finding comparison.
+- Side-by-side source evidence for added, removed, modified, and unchanged sheets.
+- New, resolved, and persisting finding deltas with explicit comparison limitations.
 - Five review modes:
   - Submission readiness
   - Documentation review
@@ -300,8 +303,10 @@ npm run build
 
 ## Product direction
 
-The next valuable loop is:
+The product loop now has its first end-to-end revision slice:
 
 > Upload a drawing set → understand its sheets and references → find evidence-backed risks → let a professional decide → upload a revision → prove what was fixed and what regressed.
+
+The current revision comparison proves structured sheet-metadata and exact finding-identity changes. Pixel-level alignment, moved-region detection, declared-intent verification, and signed revision reports remain future work.
 
 See [docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md) for research, competitive analysis, differentiated opportunities, AI architecture, metrics, and the prioritized roadmap.

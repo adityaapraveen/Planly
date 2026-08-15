@@ -4,6 +4,7 @@ import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing, getDraw
 
 import { startAnalysis } from '../services/analysis-runner.service.js'
 import { requestDrawingAnalysis } from '../services/analysis.service.js'
+import { getRevisionComparison } from '../services/revision-comparison.service.js'
 
 export const uploadDrawingController = asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -13,10 +14,15 @@ export const uploadDrawingController = asyncHandler(async (req, res) => {
         })
     }
 
+    const revisionOfId = typeof req.body?.revisionOfId === 'string'
+        ? req.body.revisionOfId.trim()
+        : null
+
     const drawing = await uploadProjectDrawing({
         userId: req.user.id,
         projectId: req.params.projectId,
-        file: req.file
+        file: req.file,
+        revisionOfId: revisionOfId || null
     })
 
     let result
@@ -55,6 +61,7 @@ export const uploadDrawingController = asyncHandler(async (req, res) => {
                 size: drawing.size,
                 status: result.analysis.status,
                 projectId: drawing.projectId,
+                revisionOfId: drawing.revisionOfId,
                 createdAt: drawing.createdAt,
                 updatedAt: drawing.updatedAt
             },
@@ -101,5 +108,17 @@ export const getDrawingReportController = asyncHandler(async (req, res) => {
         data: {
             drawing
         }
+    })
+})
+
+export const getRevisionComparisonController = asyncHandler(async (req, res) => {
+    const comparison = await getRevisionComparison({
+        userId: req.user.id,
+        drawingId: req.params.drawingId
+    })
+
+    res.status(200).json({
+        success: true,
+        data: { comparison }
     })
 })

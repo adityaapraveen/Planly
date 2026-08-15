@@ -21,7 +21,8 @@
   margin-inline: auto;
 }
 
-.app-layout-main > .drawing-report-page {
+.app-layout-main > .drawing-report-page,
+.app-layout-main > .revision-page {
   max-width: 1560px;
 }
 

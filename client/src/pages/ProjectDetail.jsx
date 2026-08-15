@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, FileText, Layers3, Upload } from 'lucide-react'
+import { ChevronRight, FileText, GitCompareArrows, Layers3, Upload } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useDrawings } from '../hooks/useDrawings'
 import { deleteDrawing, uploadDrawing } from '../services/drawing.service'
@@ -22,6 +22,7 @@ export function ProjectDetail() {
   const [showUpload, setShowUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [revisionOfId, setRevisionOfId] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -30,14 +31,21 @@ export function ProjectDetail() {
     setUploading(true)
     setUploadError('')
     try {
-      await uploadDrawing(projectId, file)
+      await uploadDrawing(projectId, file, { revisionOfId: revisionOfId || null })
       setShowUpload(false)
+      setRevisionOfId('')
       refetchDrawings()
     } catch (err) {
       setUploadError(err.message)
     } finally {
       setUploading(false)
     }
+  }
+
+  const openUpload = (previousDrawing = null) => {
+    setUploadError('')
+    setRevisionOfId(previousDrawing?.id || '')
+    setShowUpload(true)
   }
 
   const handleDeleteDrawing = async () => {
@@ -76,7 +84,7 @@ export function ProjectDetail() {
               <span className={`project-detail-live ${drawings.length === 0 ? 'waiting' : ''}`}><i /> {drawings.length > 0 ? 'Evidence-ready workspace' : 'Awaiting first drawing'}</span>
             </div>
           </div>
-          <Button onClick={() => setShowUpload(true)}>
+          <Button onClick={() => openUpload()}>
             <Upload size={16} /> Upload drawing
           </Button>
         </div>
@@ -101,7 +109,7 @@ export function ProjectDetail() {
             icon={FileText}
             title="No drawings uploaded"
             description="Upload a PDF drawing to get started with AI-powered compliance analysis."
-            action={<Button onClick={() => setShowUpload(true)}><Upload size={16} /> Upload drawing</Button>}
+            action={<Button onClick={() => openUpload()}><Upload size={16} /> Upload drawing</Button>}
           />
         ) : (
           <div className="drawings-list">
@@ -111,16 +119,38 @@ export function ProjectDetail() {
                 drawing={d}
                 onClick={() => navigate(`/drawings/${d.id}/report`)}
                 onDelete={setDeleteTarget}
+                onCompare={() => navigate(`/drawings/${d.id}/compare`)}
+                onUploadRevision={openUpload}
               />
             ))}
           </div>
         )}
       </div>
 
-      <Modal isOpen={showUpload} onClose={() => setShowUpload(false)} title="Upload drawing" footer={
+      <Modal isOpen={showUpload} onClose={() => { setShowUpload(false); setRevisionOfId('') }} title={revisionOfId ? 'Upload drawing revision' : 'Upload drawing'} footer={
         uploading ? <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-400)' }}>Uploading…</span> : null
       }>
-        {uploadError && <div className="auth-error" style={{ marginBottom: 'var(--space-4)' }}>{uploadError}</div>}
+        {uploadError && <div className="auth-error project-upload-error">{uploadError}</div>}
+        {drawings.length > 0 && (
+          <div className="revision-upload-field">
+            <label htmlFor="revision-of">Revision relationship</label>
+            <div className="revision-upload-select-wrap">
+              <GitCompareArrows size={16} />
+              <select
+                id="revision-of"
+                value={revisionOfId}
+                onChange={(event) => setRevisionOfId(event.target.value)}
+                disabled={uploading}
+              >
+                <option value="">Standalone drawing—not a revision</option>
+                {drawings.map((drawing) => (
+                  <option value={drawing.id} key={drawing.id}>Revision of {drawing.fileName}</option>
+                ))}
+              </select>
+            </div>
+            <p>{revisionOfId ? 'Planly will compare sheet metadata and findings after analysis completes.' : 'Choose an earlier drawing to enable revision comparison.'}</p>
+          </div>
+        )}
         <FileUpload onFileSelect={handleFileSelect} uploading={uploading} />
       </Modal>
 

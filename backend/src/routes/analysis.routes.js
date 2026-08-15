@@ -7,7 +7,10 @@ import {
     updateAnalysisIssueController,
     updateSheetMetadataController
 } from '../controllers/analysis.controller.js'
-import { getDrawingReportController } from '../controllers/drawing.controller.js'
+import {
+    getDrawingReportController,
+    getRevisionComparisonController
+} from '../controllers/drawing.controller.js'
 import { analysisRateLimit } from '../middlewares/rateLimits.js'
 
 export const analysisRouter = express.Router()
@@ -38,4 +41,9 @@ analysisRouter.patch(
 analysisRouter.get(
     '/drawings/:drawingId/report',
     getDrawingReportController
+)
+
+analysisRouter.get(
+    '/drawings/:drawingId/revision-comparison',
+    getRevisionComparisonController
 )
