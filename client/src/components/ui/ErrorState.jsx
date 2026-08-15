@@ -8,7 +8,7 @@ export function ErrorState({ message = 'Something went wrong', onRetry }) {
       <div className="error-state-icon">
         <AlertTriangle size={24} />
       </div>
-      <h3>Error</h3>
+      <h3>We couldn&apos;t load this</h3>
       <p>{message}</p>
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>

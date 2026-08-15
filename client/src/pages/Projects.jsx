@@ -84,7 +84,11 @@ export function Projects() {
   return (
     <div className="projects-page">
       <div className="projects-header">
-        <h1>Projects</h1>
+        <div>
+          <span className="page-eyebrow">Drawing-set portfolio</span>
+          <h1>Projects</h1>
+          <p>Organize issued sets, inspect evidence, and keep review decisions together.</p>
+        </div>
         <Button onClick={openCreate}><Plus size={16} /> New project</Button>
       </div>
 

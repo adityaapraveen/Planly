@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
+import { CheckCircle2, ScanSearch } from 'lucide-react'
 import './Auth.css'
 
 export function Login() {
@@ -35,15 +36,33 @@ export function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        <Link to="/" className="auth-brand">
-          <span className="auth-brand-mark">P</span>
-          Planly
-        </Link>
-
-        <div className="auth-card">
+      <div className="auth-shell">
+        <aside className="auth-context">
+          <Link to="/" className="auth-brand auth-brand-light">
+            <span className="auth-brand-mark"><ScanSearch size={18} /></span>
+            Planly
+          </Link>
+          <div className="auth-context-copy">
+            <span className="auth-eyebrow">Architectural intelligence</span>
+            <h2>Return to the evidence behind every review.</h2>
+            <p>Your projects, drawing sets, cited findings, and reviewer decisions stay in one connected workspace.</p>
+            <ul>
+              <li><CheckCircle2 size={16} /> Project-scoped drawing evidence</li>
+              <li><CheckCircle2 size={16} /> Inspectable AI-assisted findings</li>
+              <li><CheckCircle2 size={16} /> Human confirmation trail</li>
+            </ul>
+          </div>
+          <p className="auth-context-note">Built for technical review, not black-box scoring.</p>
+        </aside>
+        <main className="auth-container">
+          <Link to="/" className="auth-brand auth-brand-mobile">
+            <span className="auth-brand-mark"><ScanSearch size={18} /></span>
+            Planly
+          </Link>
+          <div className="auth-card">
+            <span className="auth-eyebrow">Workspace access</span>
           <h1>Welcome back</h1>
-          <p className="auth-card-subtitle">Sign in to continue to your workspace</p>
+          <p className="auth-card-subtitle">Sign in to continue your drawing review.</p>
 
           {error && <div className="auth-error">{error}</div>}
 
@@ -73,11 +92,11 @@ export function Login() {
               {submitting ? <Spinner size="sm" /> : 'Sign in'}
             </Button>
           </form>
-        </div>
-
-        <p className="auth-footer">
-          Don't have an account? <Link to="/register">Create one</Link>
-        </p>
+          </div>
+          <p className="auth-footer">
+            Don&apos;t have an account? <Link to="/register">Create one</Link>
+          </p>
+        </main>
       </div>
     </div>
   )

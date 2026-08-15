@@ -1,5 +1,7 @@
 # Planly Architectural Intelligence Product Brief
 
+> Product UI is part of the product contract. Every roadmap item in this brief must follow the [Planly UI Design System](UI_DESIGN_SYSTEM.md), including its evidence, accessibility, responsive, motion, and visual-QA requirements.
+
 Last researched: August 12, 2026
 
 Status: Living product and engineering context

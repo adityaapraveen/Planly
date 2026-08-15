@@ -5,6 +5,9 @@
   justify-content: center;
   text-align: center;
   padding: var(--space-16) var(--space-6);
+  background: rgba(255, 255, 255, .72);
+  border: 1px dashed var(--neutral-200);
+  border-radius: var(--radius-xl);
   animation: fadeInUp var(--duration-slow) var(--ease-default);
 }
 
@@ -14,9 +17,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--neutral-100);
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
   border-radius: var(--radius-xl);
-  color: var(--neutral-400);
+  color: var(--primary-600);
   margin-bottom: var(--space-5);
 }
 
@@ -29,7 +33,7 @@
 
 .empty-state p {
   font-size: var(--font-size-base);
-  color: var(--neutral-400);
+  color: var(--neutral-500);
   max-width: 360px;
   margin-bottom: var(--space-6);
 }

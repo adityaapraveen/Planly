@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Spinner } from '../components/ui/Spinner'
+import { CheckCircle2, ScanSearch } from 'lucide-react'
 import './Auth.css'
 
 export function Register() {
@@ -36,15 +37,33 @@ export function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        <Link to="/" className="auth-brand">
-          <span className="auth-brand-mark">P</span>
-          Planly
-        </Link>
-
-        <div className="auth-card">
+      <div className="auth-shell">
+        <aside className="auth-context">
+          <Link to="/" className="auth-brand auth-brand-light">
+            <span className="auth-brand-mark"><ScanSearch size={18} /></span>
+            Planly
+          </Link>
+          <div className="auth-context-copy">
+            <span className="auth-eyebrow">Start with one drawing set</span>
+            <h2>Build a review record your team can inspect.</h2>
+            <p>Bring source drawings, AI assistance, and reviewer judgment together without losing the evidence chain.</p>
+            <ul>
+              <li><CheckCircle2 size={16} /> Organize drawings by project</li>
+              <li><CheckCircle2 size={16} /> Review multiple technical modes</li>
+              <li><CheckCircle2 size={16} /> Preserve human corrections</li>
+            </ul>
+          </div>
+          <p className="auth-context-note">AI assists the review. Your team owns the decision.</p>
+        </aside>
+        <main className="auth-container">
+          <Link to="/" className="auth-brand auth-brand-mobile">
+            <span className="auth-brand-mark"><ScanSearch size={18} /></span>
+            Planly
+          </Link>
+          <div className="auth-card">
+            <span className="auth-eyebrow">Create workspace</span>
           <h1>Create your account</h1>
-          <p className="auth-card-subtitle">Start reviewing plans with AI-powered analysis</p>
+          <p className="auth-card-subtitle">Set up your account and start a project workspace.</p>
 
           {error && <div className="auth-error">{error}</div>}
 
@@ -85,11 +104,11 @@ export function Register() {
               {submitting ? <Spinner size="sm" /> : 'Create account'}
             </Button>
           </form>
-        </div>
-
-        <p className="auth-footer">
-          Already have an account? <Link to="/login">Sign in</Link>
-        </p>
+          </div>
+          <p className="auth-footer">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </p>
+        </main>
       </div>
     </div>
   )

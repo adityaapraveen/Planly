@@ -39,7 +39,7 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - API, authentication, upload, daily-analysis, and analysis-trigger limits.
 - Request IDs and structured error logs.
 
-The researched product strategy and implementation backlog live in [Architectural Intelligence Product Brief](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md).
+The researched product strategy and implementation backlog live in [Architectural Intelligence Product Brief](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md). The permanent product UI principles, component contract, and visual definition of done live in [Planly UI Design System](docs/UI_DESIGN_SYSTEM.md).
 
 ## Technology
 

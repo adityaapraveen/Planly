@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, FileText, Upload } from 'lucide-react'
+import { ChevronRight, FileText, Layers3, Upload } from 'lucide-react'
 import { useProject } from '../hooks/useProject'
 import { useDrawings } from '../hooks/useDrawings'
 import { deleteDrawing, uploadDrawing } from '../services/drawing.service'
@@ -67,9 +67,14 @@ export function ProjectDetail() {
           <span>{project?.name}</span>
         </div>
         <div className="project-detail-title">
-          <div>
+          <div className="project-detail-heading-copy">
+            <span className="page-eyebrow">Project workspace</span>
             <h1>{project?.name}</h1>
             {project?.description && <p className="project-detail-desc">{project.description}</p>}
+            <div className="project-detail-meta">
+              <span><Layers3 size={14} /> {drawings.length} drawing {drawings.length === 1 ? 'file' : 'files'}</span>
+              <span className={`project-detail-live ${drawings.length === 0 ? 'waiting' : ''}`}><i /> {drawings.length > 0 ? 'Evidence-ready workspace' : 'Awaiting first drawing'}</span>
+            </div>
           </div>
           <Button onClick={() => setShowUpload(true)}>
             <Upload size={16} /> Upload drawing
@@ -81,7 +86,10 @@ export function ProjectDetail() {
 
       <div className="project-detail-section">
         <div className="project-detail-section-header">
-          <h2>Drawings</h2>
+          <div>
+            <span className="section-eyebrow">Source documents</span>
+            <h2>Drawings</h2>
+          </div>
         </div>
 
         {drawingsLoading ? (

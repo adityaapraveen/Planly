@@ -6,6 +6,9 @@
   text-align: center;
   padding: var(--space-16) var(--space-6);
   animation: fadeInUp var(--duration-slow) var(--ease-default);
+  background: rgba(255,255,255,.82);
+  border: 1px solid var(--danger-100);
+  border-radius: var(--radius-xl);
 }
 
 .error-state-icon {
@@ -29,7 +32,7 @@
 
 .error-state p {
   font-size: var(--font-size-base);
-  color: var(--neutral-400);
+  color: var(--neutral-500);
   max-width: 400px;
   margin-bottom: var(--space-6);
 }

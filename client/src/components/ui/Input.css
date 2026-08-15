@@ -1,24 +1,26 @@
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
 }
 
 .input-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--neutral-700);
+  color: var(--neutral-600);
 }
 
 .input-field {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  min-height: 42px;
+  padding: 0.65rem 0.875rem;
   font-size: var(--font-size-base);
   color: var(--neutral-900);
   background: var(--color-white);
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-md);
-  transition: all var(--duration-base) var(--ease-default);
+  box-shadow: inset 0 1px 1px rgba(13, 23, 38, .02);
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default);
   outline: none;
 }
 
@@ -32,7 +34,7 @@
 
 .input-field:focus {
   border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px var(--primary-50);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .13);
 }
 
 .input-field.input-error {

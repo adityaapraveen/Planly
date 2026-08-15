@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, Settings, LogOut, ChevronDown, ScanSearch } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { getInitials } from '../../utils/format'
 import './Navbar.css'
@@ -38,32 +38,34 @@ export function Navbar({ onToggleSidebar }) {
             <Menu size={20} />
           </button>
           <Link to="/dashboard" className="navbar-brand">
-            <span className="navbar-brand-mark">P</span>
-            Planly
+            <span className="navbar-brand-mark"><ScanSearch size={17} /></span>
+            <span>Planly</span>
           </Link>
+          <span className="navbar-workspace-label">Review workspace</span>
         </div>
 
         <div className="navbar-right">
           <div className="navbar-user" ref={dropdownRef}>
             <button
+              className="navbar-user-trigger"
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label="User menu"
+              aria-expanded={dropdownOpen}
             >
               <div className="navbar-avatar">
                 {getInitials(user?.name)}
               </div>
               <span className="navbar-user-name">{user?.name}</span>
-              <ChevronDown size={14} style={{ color: 'var(--neutral-400)' }} />
+              <ChevronDown className="navbar-user-chevron" size={14} />
             </button>
 
             {dropdownOpen && (
               <div className="navbar-dropdown">
-                <div style={{ padding: 'var(--space-2) var(--space-3)' }}>
-                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--neutral-900)' }}>
+                <div className="navbar-dropdown-profile">
+                  <div className="navbar-dropdown-name">
                     {user?.name}
                   </div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-400)' }}>
+                  <div className="navbar-dropdown-email">
                     {user?.email}
                   </div>
                 </div>
