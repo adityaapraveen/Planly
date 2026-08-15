@@ -92,6 +92,10 @@ model Drawing {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  revisionOfId String?
+  revisionOf   Drawing?  @relation("DrawingRevisionHistory", fields: [revisionOfId], references: [id], onDelete: SetNull)
+  revisions    Drawing[] @relation("DrawingRevisionHistory")
+
   pages DrawingPage[]
 
   analyses Analysis[]
@@ -99,6 +103,7 @@ model Drawing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([revisionOfId])
   @@map("drawings")
 }
 

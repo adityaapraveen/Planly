@@ -54,12 +54,21 @@
   color: var(--neutral-400);
 }
 
+.drawing-card-revision { display: flex; align-items: center; gap: 5px; max-width: 100%; margin-top: 5px; overflow: hidden; color: var(--primary-700); font-size: 10px; font-weight: var(--font-weight-medium); text-overflow: ellipsis; white-space: nowrap; }
+
 .drawing-card-right {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-shrink: 0;
 }
+
+.drawing-card-actions { display: flex; align-items: center; gap: var(--space-2); }
+.drawing-card-action { min-height: 30px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; color: var(--neutral-600); background: white; border: 1px solid var(--neutral-200); border-radius: var(--radius-sm); font-size: 11px; font-weight: var(--font-weight-semibold); transition: border-color var(--duration-fast), color var(--duration-fast), background var(--duration-fast); }
+.drawing-card-action:hover { color: var(--neutral-900); border-color: var(--neutral-300); background: var(--neutral-25); }
+.drawing-card-action.compare { color: var(--primary-700); border-color: var(--primary-200); background: var(--primary-50); }
+.drawing-card-action.compare:hover { border-color: var(--primary-300); background: var(--primary-100); }
+.drawing-card-action:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
 
 .drawing-card-delete {
   width: 30px;
@@ -84,7 +93,8 @@
 .drawing-card:hover .drawing-card-open { color: var(--primary-600); transform: translate(2px, -2px); }
 
 @media (max-width: 560px) {
-  .drawing-card { align-items: flex-start; padding: var(--space-4); }
-  .drawing-card-right { align-items: flex-end; flex-direction: column; }
+  .drawing-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: flex-start; padding: var(--space-4); }
+  .drawing-card-right { grid-column: 1 / -1; width: 100%; align-items: center; justify-content: space-between; }
+  .drawing-card-actions { margin-left: auto; }.drawing-card-action span { display: none; }.drawing-card-action { width: 32px; padding: 0; justify-content: center; }
   .drawing-card-open { display: none; }
 }

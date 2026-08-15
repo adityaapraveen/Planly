@@ -14,7 +14,12 @@ const DRAWING_PAGES_TABLE = 'public.drawing_pages'
 const isMissingDrawingPagesTableError = (error) =>
     error?.message?.includes(DRAWING_PAGES_TABLE)
 
-export const uploadProjectDrawing = async ({ userId, projectId, file }) => {
+export const uploadProjectDrawing = async ({ userId, projectId, file, revisionOfId = null }) => {
+    if (revisionOfId && (typeof revisionOfId !== 'string' || revisionOfId.length > 100)) {
+        await deleteStoredAssets([file.path])
+        throw new AppError('Invalid previous revision drawing', 400)
+    }
+
     const project = await prisma.project.findFirst({
         where: {
             id: projectId,
@@ -24,6 +29,22 @@ export const uploadProjectDrawing = async ({ userId, projectId, file }) => {
     if (!project) {
         await deleteStoredAssets([file.path])
         throw new AppError('Project not found', 404)
+    }
+
+    if (revisionOfId) {
+        const previousRevision = await prisma.drawing.findFirst({
+            where: {
+                id: revisionOfId,
+                projectId,
+                project: { userId }
+            },
+            select: { id: true }
+        })
+
+        if (!previousRevision) {
+            await deleteStoredAssets([file.path])
+            throw new AppError('Previous revision drawing not found in this project', 400)
+        }
     }
 
     try {
@@ -43,6 +64,7 @@ export const uploadProjectDrawing = async ({ userId, projectId, file }) => {
                 mimeType: file.mimetype,
                 size: file.size,
                 projectId,
+                revisionOfId: revisionOfId || null,
                 status: 'PENDING'
             }
         })
@@ -78,7 +100,15 @@ export const getProjectDrawings = async ({ userId, projectId }) => {
             status: true,
             projectId: true,
             createdAt: true,
-            updatedAt: true
+            updatedAt: true,
+            revisionOfId: true,
+            revisionOf: {
+                select: {
+                    id: true,
+                    fileName: true,
+                    createdAt: true
+                }
+            }
         },
         orderBy: {
             createdAt: 'desc'
@@ -224,6 +254,7 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
         size: drawing.size,
         status: drawing.status,
         projectId: drawing.projectId,
+        revisionOfId: drawing.revisionOfId,
         createdAt: drawing.createdAt,
         updatedAt: drawing.updatedAt,
         analysis: serializeAnalysis(drawing.analyses?.[0]),

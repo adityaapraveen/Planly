@@ -469,6 +469,8 @@ Goal: prove what a revision accomplished.
 
 ### P3.1 Revision matching and alignment
 
+Implementation status as of August 16, 2026: the first vertical slice is implemented. Users can link a new drawing upload to an earlier project drawing, match sheets by normalized sheet number with an explicit page-position fallback, inspect added, removed, metadata-modified, and unchanged sheets side by side, and compare new, resolved, and persisting findings. The UI exposes the deterministic matching method and explicitly avoids claiming pixel-level geometry changes. Content fingerprints, scale/crop/rotation alignment, visual overlays, moved-region detection, and human match correction remain open.
+
 - Match sheets using metadata, title block, content fingerprint, and human correction.
 - Align different scale, crop, rotation, and raster/vector exports.
 - Visual overlay and side-by-side comparison.

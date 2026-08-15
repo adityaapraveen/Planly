@@ -9,6 +9,7 @@ import { Projects } from './pages/Projects'
 import { ProjectDetail } from './pages/ProjectDetail'
 import { Settings } from './pages/Settings'
 import { DrawingReport } from './pages/DrawingReport'
+import { RevisionComparison } from './pages/RevisionComparison'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:projectId" element={<ProjectDetail />} />
             <Route path="/drawings/:drawingId/report" element={<DrawingReport />} />
+            <Route path="/drawings/:drawingId/compare" element={<RevisionComparison />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 
