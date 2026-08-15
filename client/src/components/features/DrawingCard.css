@@ -1,19 +1,23 @@
 .drawing-card {
   background: var(--color-white);
-  border: 1px solid var(--neutral-100);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xl);
   padding: var(--space-4) var(--space-5);
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  transition: all var(--duration-base) var(--ease-default);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--duration-fast) var(--ease-default), box-shadow var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default);
   cursor: pointer;
 }
 
 .drawing-card:hover {
-  border-color: var(--neutral-200);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--primary-200);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
+
+.drawing-card:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 3px; }
 
 .drawing-card-icon {
   width: 44px;
@@ -74,4 +78,13 @@
 .drawing-card-delete:hover {
   background: var(--danger-50);
   color: var(--danger-600);
+}
+
+.drawing-card-open { color: var(--neutral-300); transition: color var(--duration-fast), transform var(--duration-fast); }
+.drawing-card:hover .drawing-card-open { color: var(--primary-600); transform: translate(2px, -2px); }
+
+@media (max-width: 560px) {
+  .drawing-card { align-items: flex-start; padding: var(--space-4); }
+  .drawing-card-right { align-items: flex-end; flex-direction: column; }
+  .drawing-card-open { display: none; }
 }

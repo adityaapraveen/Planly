@@ -84,6 +84,7 @@ export function ProjectIntelligence({ projectId }) {
   const [checkReport, setCheckReport] = useState(null)
   const [updatingCheck, setUpdatingCheck] = useState('')
   const [error, setError] = useState('')
+  const [loadingWorkspace, setLoadingWorkspace] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -99,6 +100,8 @@ export function ProjectIntelligence({ projectId }) {
         setCheckReport(checkResponse.data?.report || null)
       } catch (err) {
         if (active) setError(err.message || 'Failed to load project intelligence')
+      } finally {
+        if (active) setLoadingWorkspace(false)
       }
     }
 
@@ -163,6 +166,7 @@ export function ProjectIntelligence({ projectId }) {
           <h2>Search, ask, and enforce project checks</h2>
           <p>Answers use indexed project evidence only. Every supported answer includes a sheet and page citation.</p>
         </div>
+        <div className="intelligence-trust-badge"><ShieldCheck size={14} /> Project-scoped</div>
       </div>
 
       {error && (
@@ -171,7 +175,14 @@ export function ProjectIntelligence({ projectId }) {
         </div>
       )}
 
-      <div className="project-intelligence-grid">
+      {loadingWorkspace && (
+        <div className="intelligence-loading" role="status" aria-live="polite">
+          <span className="intelligence-loading-pulse" />
+          <div><strong>Connecting project evidence</strong><p>Loading cited questions and deterministic checks…</p></div>
+        </div>
+      )}
+
+      <div className={`project-intelligence-grid ${loadingWorkspace ? 'is-loading' : ''}`}>
         <div className="project-intelligence-card">
           <div className="intelligence-card-heading">
             <Search size={18} />
@@ -179,6 +190,7 @@ export function ProjectIntelligence({ projectId }) {
           </div>
           <form className="intelligence-input-row" onSubmit={handleSearch}>
             <input
+              aria-label="Search project evidence"
               value={searchQuery}
               maxLength={500}
               placeholder="Search A501, accessibility, missing target…"
@@ -204,6 +216,7 @@ export function ProjectIntelligence({ projectId }) {
           </div>
           <form className="intelligence-question-form" onSubmit={handleAsk}>
             <textarea
+              aria-label="Ask a question about this drawing set"
               value={question}
               maxLength={1000}
               rows={3}

@@ -44,13 +44,13 @@ export function FileUpload({ onFileSelect, accept = '.pdf', uploading = false })
         type="file"
         accept={accept}
         onChange={handleChange}
-        tabIndex={-1}
+        aria-label="Choose PDF drawing"
       />
       <div className="file-upload-icon">
         <Upload size={22} />
       </div>
-      <h4>Drop a PDF drawing here, or click to browse</h4>
-      <p>PDF files up to 20MB</p>
+      <h4>{uploading ? 'Uploading drawing…' : 'Drop a PDF drawing here, or choose a file'}</h4>
+      <p>PDF only · Maximum file size 20 MB</p>
       {selectedFile && (
         <div className="file-upload-selected">
           <FileCheck size={14} />

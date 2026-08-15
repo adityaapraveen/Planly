@@ -10,9 +10,19 @@
 .app-layout-main {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: var(--space-8) var(--space-8);
+  padding: var(--space-8) clamp(var(--space-5), 3vw, var(--space-10));
   max-width: 100%;
   transition: margin-left var(--duration-slow) var(--ease-default);
+}
+
+.app-layout-main > * {
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin-inline: auto;
+}
+
+.app-layout-main > .drawing-report-page {
+  max-width: 1560px;
 }
 
 @media (max-width: 768px) {

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
-import { FolderKanban, FileText, Sparkles } from 'lucide-react'
+import { ArrowRight, FolderKanban, FileText, Sparkles, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useProjects } from '../hooks/useProjects'
 import { updateProject, deleteProject } from '../services/project.service'
@@ -27,6 +27,7 @@ export function Dashboard() {
     (sum, project) => sum + (project.drawings?.filter((drawing) => !!drawing.analysis).length || 0),
     0
   )
+  const reviewCoverage = totalDrawings > 0 ? Math.round((totalAnalyses / totalDrawings) * 100) : 0
 
   const openEdit = (project) => {
     setFormName(project.name)
@@ -72,39 +73,61 @@ export function Dashboard() {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>Welcome back, {user?.name?.split(' ')[0]}</h1>
-        <p>Here's an overview of your workspace</p>
+        <div>
+          <span className="page-eyebrow">Workspace overview</span>
+          <h1>Good to see you, {user?.name?.split(' ')[0]}</h1>
+          <p>Track drawing coverage and return to the project that needs attention.</p>
+        </div>
+        <Link to="/projects">
+          <Button>Open projects <ArrowRight size={16} /></Button>
+        </Link>
       </div>
 
       <div className="dashboard-stats">
         <div className="stat-card">
           <div className="stat-card-icon neutral"><FolderKanban size={20} /></div>
           <div>
+            <div className="stat-card-kicker">Portfolio</div>
             <div className="stat-card-value">{projects.length}</div>
-            <div className="stat-card-label">Projects</div>
+            <div className="stat-card-label">Active projects</div>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-card-icon primary"><FileText size={20} /></div>
           <div>
+            <div className="stat-card-kicker">Documents</div>
             <div className="stat-card-value">{totalDrawings}</div>
-            <div className="stat-card-label">Drawings</div>
+            <div className="stat-card-label">Drawing files</div>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-card-icon success"><Sparkles size={20} /></div>
           <div>
+            <div className="stat-card-kicker">Reviewed</div>
             <div className="stat-card-value">{totalAnalyses}</div>
-            <div className="stat-card-label">Analyses</div>
+            <div className="stat-card-label">AI-assisted analyses</div>
+          </div>
+        </div>
+        <div className="stat-card coverage">
+          <div className="stat-card-icon coverage"><ShieldCheck size={20} /></div>
+          <div className="stat-card-coverage-copy">
+            <div className="stat-card-kicker">Coverage</div>
+            <div className="stat-card-value">{reviewCoverage}%</div>
+            <div className="stat-progress" aria-label={`${reviewCoverage}% of drawings analyzed`}>
+              <span style={{ width: `${reviewCoverage}%` }} />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="dashboard-section">
         <div className="dashboard-section-header">
-          <h2>Recent Projects</h2>
+          <div>
+            <span className="section-eyebrow">Continue reviewing</span>
+            <h2>Recent projects</h2>
+          </div>
           <Link to="/projects">
-            <Button variant="ghost" size="sm">View all</Button>
+            <Button variant="ghost" size="sm">View all <ArrowRight size={14} /></Button>
           </Link>
         </div>
 

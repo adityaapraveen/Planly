@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, Pencil, Trash2, Calendar } from 'lucide-react'
+import { ArrowUpRight, FileText, FolderKanban, Pencil, Trash2, Calendar } from 'lucide-react'
 import { formatRelativeTime } from '../../utils/format'
 import './ProjectCard.css'
 
@@ -11,8 +11,16 @@ export function ProjectCard({ project, onEdit, onDelete }) {
     navigate(`/projects/${project.id}`)
   }
 
+  const handleKeyDown = (event) => {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleClick()
+    }
+  }
+
   return (
-    <div className="project-card" onClick={handleClick}>
+    <div className="project-card" onClick={handleClick} onKeyDown={handleKeyDown} role="link" tabIndex={0}>
       <div className="project-card-header">
         <div className="project-card-icon">
           <FolderKanban size={18} />
@@ -57,6 +65,11 @@ export function ProjectCard({ project, onEdit, onDelete }) {
           <Calendar size={12} />
           {formatRelativeTime(project.createdAt)}
         </span>
+        <span className="project-card-meta-item">
+          <FileText size={12} />
+          {project.drawings?.length || 0} drawings
+        </span>
+        <ArrowUpRight className="project-card-open" size={15} aria-hidden="true" />
       </div>
     </div>
   )

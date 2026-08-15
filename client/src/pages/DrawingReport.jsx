@@ -278,8 +278,9 @@ export function DrawingReport() {
     <div className="drawing-report-page">
       <header className="report-header">
         <div>
+          <span className="page-eyebrow">Evidence review workspace</span>
           <h1>{drawing.fileName}</h1>
-          <p>AI drawing report and issue overlays</p>
+          <p>Inspect the drawing, cited findings, and reviewer decisions in one place.</p>
         </div>
         <div className="report-header-actions">
           <label className="review-mode-field" htmlFor="review-mode">
@@ -313,13 +314,13 @@ export function DrawingReport() {
       )}
 
       {retrying && (
-        <div className="report-inline-error" style={{ borderColor: 'var(--primary-200)', background: 'var(--primary-50)', color: 'var(--primary-700)' }}>
+        <div className="report-inline-error informational">
           <span>Retry requested. Analysis is restarting…</span>
         </div>
       )}
 
       {interactionMessage && (
-        <div className="report-inline-error" style={{ borderColor: 'var(--neutral-200)', background: 'var(--neutral-50)', color: 'var(--neutral-700)' }}>
+        <div className="report-inline-error neutral">
           <span>{interactionMessage}</span>
         </div>
       )}
