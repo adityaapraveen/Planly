@@ -4,12 +4,19 @@ import OpenAI from 'openai'
 
 import { config } from '../../../config/config.js'
 
-const client = new OpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: config.OPENROUTER_API_KEY,
-    timeout: config.AI_REQUEST_TIMEOUT_MS,
-    maxRetries: config.AI_MAX_RETRIES
-})
+let client
+
+const getClient = () => {
+    if (!client) {
+        client = new OpenAI({
+            baseURL: 'https://openrouter.ai/api/v1',
+            apiKey: config.OPENROUTER_API_KEY,
+            timeout: config.AI_REQUEST_TIMEOUT_MS,
+            maxRetries: config.AI_MAX_RETRIES
+        })
+    }
+    return client
+}
 
 const imageToBase64 = async (imagePath) => {
     const buffer = await fs.readFile(imagePath)
@@ -44,7 +51,7 @@ export const openrouterProvider = {
         userPrompt,
         temperature = 0.2
     }) => {
-        const response = await client.chat.completions.create({
+        const response = await getClient().chat.completions.create({
             model: config.OPENROUTER_MODEL,
             temperature,
             response_format: {
@@ -80,7 +87,7 @@ export const openrouterProvider = {
             }))
         )
 
-        const response = await client.chat.completions.create({
+        const response = await getClient().chat.completions.create({
             model: config.OPENROUTER_MODEL,
             temperature,
             response_format: {

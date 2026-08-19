@@ -30,6 +30,11 @@ const envSchema = z.object({
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().optional(),
 
+    AI_EMBEDDING_ENABLED: z.enum(['true', 'false']).default('true')
+        .transform((value) => value === 'true'),
+    AI_EMBEDDING_MODEL: z.string().trim().min(1).default('text-embedding-3-small'),
+    AI_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(1536).default(256),
+
     OPENROUTER_API_KEY: z.string().optional(),
     OPENROUTER_MODEL: z.string().optional(),
 
@@ -54,6 +59,28 @@ const envSchema = z.object({
         .min(60)
         .max(86_400)
         .default(900)
+}).superRefine((env, context) => {
+    const providerKey = env.AI_PROVIDER === 'openai'
+        ? env.OPENAI_API_KEY
+        : env.OPENROUTER_API_KEY
+    const providerModel = env.AI_PROVIDER === 'openai'
+        ? env.OPENAI_MODEL
+        : env.OPENROUTER_MODEL
+
+    if (!providerKey?.trim()) {
+        context.addIssue({
+            code: 'custom',
+            path: [env.AI_PROVIDER === 'openai' ? 'OPENAI_API_KEY' : 'OPENROUTER_API_KEY'],
+            message: `An API key is required for the ${env.AI_PROVIDER} provider`
+        })
+    }
+    if (!providerModel?.trim()) {
+        context.addIssue({
+            code: 'custom',
+            path: [env.AI_PROVIDER === 'openai' ? 'OPENAI_MODEL' : 'OPENROUTER_MODEL'],
+            message: `A model is required for the ${env.AI_PROVIDER} provider`
+        })
+    }
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -81,6 +108,9 @@ export const config = {
     AI_PROVIDER: parsed.data.AI_PROVIDER,
     OPENAI_MODEL: parsed.data.OPENAI_MODEL,
     OPENAI_API_KEY: parsed.data.OPENAI_API_KEY,
+    AI_EMBEDDING_ENABLED: parsed.data.AI_EMBEDDING_ENABLED,
+    AI_EMBEDDING_MODEL: parsed.data.AI_EMBEDDING_MODEL,
+    AI_EMBEDDING_DIMENSIONS: parsed.data.AI_EMBEDDING_DIMENSIONS,
     OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL,
     AI_REQUEST_TIMEOUT_MS: parsed.data.AI_REQUEST_TIMEOUT_MS,

@@ -20,7 +20,10 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - A cited sheet-reference graph with resolved, missing, ambiguous, and low-confidence states.
 - Clickable callout overlays that connect graph diagnostics to visible drawing evidence.
 - Project-wide search across sheet metadata, current findings, and cross-sheet references.
-- Evidence-grounded drawing-set questions with persisted answers, confidence, and sheet/page citations.
+- Persisted project evidence chunks with optional OpenAI embeddings and hybrid semantic + keyword ranking.
+- Evidence-grounded drawing-set questions with persisted answers, confidence, sheet/page citations, and retrieval traces.
+- Visible lexical fallback when semantic indexing is disabled or unavailable.
+- Index-health controls plus an offline retrieval smoke eval with hit-rate and MRR gates.
 - Explicit insufficient-evidence behavior and rejection of invented AI citations.
 - A versioned, project-configurable deterministic check library with live pass/fail results.
 - Drawing revision relationships with deterministic sheet and finding comparison.
@@ -69,6 +72,9 @@ flowchart LR
     RENDER --> AI[Vision provider]
     AI --> VALIDATE[Schema validation]
     VALIDATE --> DB
+    DB --> INDEX[Versioned evidence index]
+    INDEX --> RETRIEVE[Hybrid RRF retrieval]
+    RETRIEVE --> API
     API -->|Expiring signed URL| ASSET[Protected asset endpoint]
     ASSET --> STORAGE
 ```
@@ -185,6 +191,9 @@ Important operational settings:
 | `AI_REQUEST_TIMEOUT_MS` | Per-provider request timeout | `120000` |
 | `AI_MAX_RETRIES` | Provider SDK retries | `0` |
 | `AI_PROMPT_VERSION` | Stored with each analysis run | `v1` |
+| `AI_EMBEDDING_ENABLED` | Enables semantic indexing when the provider supports it | `true` |
+| `AI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
+| `AI_EMBEDDING_DIMENSIONS` | Stored embedding dimensions | `256` |
 | `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
 | `AI_QUESTION_DAILY_LIMIT` | Maximum cited project questions per user per UTC day | `50` |
 | `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |
@@ -203,6 +212,7 @@ All project and analysis routes require a bearer access token unless noted.
 | `GET/POST` | `/api/projects` | List or create projects |
 | `GET/PATCH/DELETE` | `/api/projects/:projectId` | Manage a project |
 | `GET` | `/api/projects/:projectId/search?q=...` | Search indexed project evidence |
+| `GET/POST` | `/api/projects/:projectId/evidence-index` | Read or refresh project context index health |
 | `GET/POST` | `/api/projects/:projectId/questions` | List or ask cited project questions |
 | `GET` | `/api/projects/:projectId/checks` | Evaluate the project check library |
 | `PATCH` | `/api/projects/:projectId/checks/:checkKey` | Configure check enablement or severity |
@@ -245,13 +255,13 @@ Malformed model output fails the run. It is never silently converted into a succ
 
 ## Project intelligence lifecycle
 
-1. Sheet metadata, findings, and references become searchable project evidence.
-2. Deterministic search returns the matching evidence with drawing, sheet, page, and region context.
-3. A project question retrieves a bounded evidence context before any model call.
-4. The model is instructed to answer only from that context and return exact evidence IDs.
-5. The API rejects unknown citations, uncited substantive answers, and contradictory insufficient-evidence responses.
-6. The accepted answer, citations, confidence, provider/model metadata, and evidence snapshot are persisted.
-7. When no project evidence exists, Planly returns and persists an insufficient-evidence answer without calling the provider.
+1. Sheet metadata, findings, and references are normalized into versioned, project-scoped evidence chunks.
+2. Changed chunks receive optional embeddings; unchanged vectors are reused and stale chunks are removed.
+3. Keyword and semantic ranks are combined with reciprocal rank fusion. If embeddings fail, lexical retrieval remains available and the reason is shown.
+4. A project question receives only the bounded, ranked evidence context—not the whole database or model memory.
+5. The model must return exact evidence IDs, and the API rejects unknown citations, uncited substantive answers, and contradictory insufficient-evidence responses.
+6. The accepted answer persists its citations, evidence snapshot, provider/model metadata, retrieval mode, candidates, and scores.
+7. When no evidence supports an answer, Planly returns and persists insufficient evidence instead of inventing an answer.
 
 The deterministic check library evaluates current project data separately from AI Q&A. Check definitions document purpose, scope, expected evidence, exclusions, severity, and version. Project settings may disable a check or change its severity without changing the underlying definition.
 
@@ -276,6 +286,7 @@ Backend:
 ```bash
 cd backend
 npm test
+npm run eval:rag
 npx prisma validate
 npx prisma migrate status
 npm audit --omit=dev
@@ -297,7 +308,8 @@ npm run build
 - There is no organization, invitation, or role model yet.
 - There is no subscription billing or metered plan enforcement yet.
 - Full provider and browser end-to-end test suites remain to be implemented.
-- Project search currently uses bounded lexical ranking over structured sheet, finding, and reference evidence; raw drawing text/symbol OCR and production full-text/vector indexes remain future work.
+- Hybrid retrieval currently scores bounded JSON vectors in the API process. Raw drawing text/symbol OCR, PostgreSQL full-text search, and pgvector/HNSW are the next scaling step before large drawing sets or multi-tenant production traffic.
+- The included retrieval eval is a deterministic smoke gate. A reviewed, real-project golden dataset is still required before making accuracy claims.
 - Check results are computed from current project data at request time; persisted historical check runs and release gates remain future work.
 - AI-generated findings require professional review and sign-off.
 
@@ -310,3 +322,5 @@ The product loop now has its first end-to-end revision slice:
 The current revision comparison proves structured sheet-metadata and exact finding-identity changes. Pixel-level alignment, moved-region detection, declared-intent verification, and signed revision reports remain future work.
 
 See [docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md](docs/ARCHITECTURAL_INTELLIGENCE_PRODUCT_BRIEF.md) for research, competitive analysis, differentiated opportunities, AI architecture, metrics, and the prioritized roadmap.
+
+See [docs/AI_NATIVE_MVP.md](docs/AI_NATIVE_MVP.md) for the implemented RAG architecture, trust contract, demo script, evaluation plan, and honest MVP boundaries.

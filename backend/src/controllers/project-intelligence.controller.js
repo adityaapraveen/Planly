@@ -9,6 +9,10 @@ import {
     getProjectCheckReport,
     updateProjectCheckSetting
 } from '../services/project-check.service.js'
+import {
+    getEvidenceIndexStatus,
+    syncProjectEvidenceIndex
+} from '../services/evidence-index.service.js'
 
 const searchSchema = z.object({
     q: z.string().trim().min(2).max(500)
@@ -82,5 +86,27 @@ export const updateProjectCheckController = asyncHandler(async (req, res) => {
         success: true,
         message: 'Project check setting updated',
         data: { report }
+    })
+})
+
+export const getEvidenceIndexStatusController = asyncHandler(async (req, res) => {
+    const index = await getEvidenceIndexStatus({
+        userId: req.user.id,
+        projectId: req.params.projectId
+    })
+    res.status(200).json({ success: true, data: { index } })
+})
+
+export const syncEvidenceIndexController = asyncHandler(async (req, res) => {
+    const index = await syncProjectEvidenceIndex({
+        userId: req.user.id,
+        projectId: req.params.projectId
+    })
+    res.status(200).json({
+        success: true,
+        message: index.retrievalMode === 'HYBRID'
+            ? 'Project context indexed for hybrid retrieval'
+            : 'Project context indexed with lexical retrieval',
+        data: { index }
     })
 })

@@ -412,7 +412,7 @@ Implementation status as of August 13, 2026: the first vertical slice is impleme
 
 ### P1.3 Search and cited set questions
 
-Implementation status as of August 15, 2026: the first vertical slice is implemented. Users can search current sheet metadata, findings, and references across a project, then ask bounded-context questions. Answers persist the evidence snapshot, provider/model metadata, confidence, and sheet/page/region citations. Unknown citations and uncited substantive answers are rejected, while empty projects return insufficient evidence without a provider call. Full drawing OCR, symbol search, vector retrieval, hybrid ranking evaluation, streaming, and question-to-revision comparison remain open.
+Implementation status as of August 19, 2026: the MVP retrieval slice is implemented. Users can search current sheet metadata, findings, and references across a project, then ask bounded-context questions. Project-scoped evidence chunks persist content hashes and optional embeddings; reciprocal rank fusion combines semantic and keyword retrieval; and unavailable embeddings visibly degrade to lexical search. Answers persist the evidence snapshot, provider/model metadata, confidence, sheet/page/region citations, retrieval mode, candidate scores, and fallback reason. Unknown citations and uncited substantive answers are rejected, while empty retrieval returns insufficient evidence. A deterministic retrieval smoke eval gates hit rate and MRR. Full drawing OCR, symbol search, pgvector/full-text indexes, a real-project golden dataset, streaming, and question-to-revision comparison remain open.
 
 - Search text, symbols, sheet metadata, findings, and references.
 - Ask questions across the set.

@@ -19,6 +19,7 @@ import {
     shouldRefreshExtractedSheet
 } from './sheet-index.service.js'
 import { resolveSheetReferences } from './sheet-reference.service.js'
+import { analysisFailureData } from './analysis-error.js'
 
 const analysisInclude = {
     issues: {
@@ -384,14 +385,15 @@ export const processAnalysisRun = async ({ analysisId, userId }) => {
     } catch (error) {
         await prisma.analysis.update({
             where: { id: run.id },
-            data: {
-                status: 'FAILED',
-                errorCode: error?.code || 'ANALYSIS_FAILED',
-                errorMessage: String(error?.message || 'Analysis failed').slice(0, 2000),
-                durationMs: Date.now() - startedAt,
-                completedAt: new Date()
-            }
-        }).catch(() => null)
+            data: analysisFailureData(error, Date.now() - startedAt)
+        }).catch((persistenceError) => {
+            console.error('Could not persist analysis failure state', {
+                analysisId: run.id,
+                errorName: persistenceError?.name,
+                errorCode: persistenceError?.code,
+                message: persistenceError?.message
+            })
+        })
 
         await refreshDrawingStatus(run.drawingId)
         throw error

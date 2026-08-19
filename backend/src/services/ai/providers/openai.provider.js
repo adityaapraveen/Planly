@@ -4,11 +4,18 @@ import OpenAI from 'openai'
 
 import { config } from '../../../config/config.js'
 
-const client = new OpenAI({
-    apiKey: config.OPENAI_API_KEY,
-    timeout: config.AI_REQUEST_TIMEOUT_MS,
-    maxRetries: config.AI_MAX_RETRIES
-})
+let client
+
+const getClient = () => {
+    if (!client) {
+        client = new OpenAI({
+            apiKey: config.OPENAI_API_KEY,
+            timeout: config.AI_REQUEST_TIMEOUT_MS,
+            maxRetries: config.AI_MAX_RETRIES
+        })
+    }
+    return client
+}
 
 const imageToBase64 = async (imagePath) => {
     const buffer = await fs.readFile(imagePath)
@@ -28,12 +35,25 @@ const getResponseContent = (response) => {
 }
 
 export const openaiProvider = {
+    generateEmbeddings: async ({ inputs }) => {
+        const response = await getClient().embeddings.create({
+            model: config.AI_EMBEDDING_MODEL,
+            input: inputs,
+            encoding_format: 'float',
+            dimensions: config.AI_EMBEDDING_DIMENSIONS
+        })
+
+        return [...response.data]
+            .sort((left, right) => left.index - right.index)
+            .map((item) => item.embedding)
+    },
+
     generateText: async ({
         systemPrompt,
         userPrompt,
         temperature = 0.2
     }) => {
-        const response = await client.chat.completions.create({
+        const response = await getClient().chat.completions.create({
             model: config.OPENAI_MODEL,
             temperature,
             response_format: {
@@ -69,7 +89,7 @@ export const openaiProvider = {
             }))
         )
 
-        const response = await client.chat.completions.create({
+        const response = await getClient().chat.completions.create({
             model: config.OPENAI_MODEL,
             temperature,
             response_format: {

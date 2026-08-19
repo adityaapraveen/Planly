@@ -10,9 +10,11 @@ import {
 } from '../controllers/project.controller.js'
 import {
     askProjectQuestionController,
+    getEvidenceIndexStatusController,
     getProjectChecksController,
     getProjectQuestionsController,
     searchProjectController,
+    syncEvidenceIndexController,
     updateProjectCheckController
 } from '../controllers/project-intelligence.controller.js'
 import { questionRateLimit } from '../middlewares/rateLimits.js'
@@ -33,6 +35,10 @@ projectRouter
   .delete(deleteProjectController)
 
 projectRouter.get('/:projectId/search', searchProjectController)
+projectRouter
+  .route('/:projectId/evidence-index')
+  .get(getEvidenceIndexStatusController)
+  .post(questionRateLimit, syncEvidenceIndexController)
 projectRouter
   .route('/:projectId/questions')
   .get(getProjectQuestionsController)
