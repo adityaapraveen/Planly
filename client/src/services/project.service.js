@@ -44,6 +44,16 @@ export async function getProjectQuestions(projectId) {
   return apiFetch(`/api/projects/${projectId}/questions`)
 }
 
+export async function getEvidenceIndexStatus(projectId) {
+  return apiFetch(`/api/projects/${projectId}/evidence-index`)
+}
+
+export async function syncEvidenceIndex(projectId) {
+  return apiFetch(`/api/projects/${projectId}/evidence-index`, {
+    method: 'POST',
+  })
+}
+
 export async function getProjectChecks(projectId) {
   return apiFetch(`/api/projects/${projectId}/checks`)
 }

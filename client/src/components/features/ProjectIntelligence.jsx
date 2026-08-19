@@ -2,17 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertCircle,
+  Database,
   ArrowUpRight,
   CheckCircle2,
   Search,
   ShieldCheck,
   Sparkles,
+  RefreshCcw,
 } from 'lucide-react'
 import {
   askProjectQuestion,
+  getEvidenceIndexStatus,
   getProjectChecks,
   getProjectQuestions,
   searchProjectEvidence,
+  syncEvidenceIndex,
   updateProjectCheck,
 } from '../../services/project.service'
 import { Button } from '../ui/Button'
@@ -45,6 +49,11 @@ function EvidenceLink({ evidence, compact = false }) {
           {evidence.sheetNumber ? `${evidence.sheetNumber} · ` : ''}
           {locationLabel(evidence)} · {evidence.drawingName}
         </small>
+        {!compact && evidence.retrieval?.reasons?.length > 0 && (
+          <em className="evidence-retrieval-reason">
+            {evidence.retrieval.mode === 'HYBRID' ? 'Hybrid match' : 'Keyword match'} · {evidence.retrieval.reasons.join(' · ')}
+          </em>
+        )}
       </div>
       <ArrowUpRight size={15} />
     </Link>
@@ -52,6 +61,7 @@ function EvidenceLink({ evidence, compact = false }) {
 }
 
 function AnswerCard({ answer }) {
+  const trace = answer.retrievalTrace
   return (
     <article className={`project-answer ${answer.status.toLowerCase()}`}>
       <div className="project-answer-heading">
@@ -69,6 +79,26 @@ function AnswerCard({ answer }) {
           ))}
         </div>
       )}
+      {trace && (
+        <details className="answer-retrieval-trace">
+          <summary>
+            <span>{answer.retrievalMode === 'HYBRID' ? 'Hybrid RAG' : 'Lexical retrieval'}</span>
+            <small>{trace.candidateCount} candidates · {trace.returnedCount} context items</small>
+          </summary>
+          <div>
+            <p>Trace <code>{trace.version}</code>. The answer model received only the ranked context listed below.</p>
+            {(trace.topCandidates || []).slice(0, 5).map((candidate) => (
+              <span key={candidate.id}>
+                #{candidate.rank} {candidate.id}
+                {candidate.semanticScore !== null && candidate.semanticScore !== undefined
+                  ? ` · ${Math.round(candidate.semanticScore * 100)}% semantic`
+                  : ` · lexical ${candidate.lexicalScore}`}
+              </span>
+            ))}
+            {trace.semanticFallbackReason && <p>Fallback: {trace.semanticFallbackReason}</p>}
+          </div>
+        </details>
+      )}
     </article>
   )
 }
@@ -85,19 +115,24 @@ export function ProjectIntelligence({ projectId }) {
   const [updatingCheck, setUpdatingCheck] = useState('')
   const [error, setError] = useState('')
   const [loadingWorkspace, setLoadingWorkspace] = useState(true)
+  const [indexStatus, setIndexStatus] = useState(null)
+  const [syncingIndex, setSyncingIndex] = useState(false)
+  const [searchTrace, setSearchTrace] = useState(null)
 
   useEffect(() => {
     let active = true
 
     async function loadWorkspace() {
       try {
-        const [questionResponse, checkResponse] = await Promise.all([
+        const [questionResponse, checkResponse, indexResponse] = await Promise.all([
           getProjectQuestions(projectId),
           getProjectChecks(projectId),
+          getEvidenceIndexStatus(projectId),
         ])
         if (!active) return
         setQuestions(questionResponse.data?.questions || [])
         setCheckReport(checkResponse.data?.report || null)
+        setIndexStatus(indexResponse.data?.index || null)
       } catch (err) {
         if (active) setError(err.message || 'Failed to load project intelligence')
       } finally {
@@ -120,10 +155,25 @@ export function ProjectIntelligence({ projectId }) {
       setError('')
       const response = await searchProjectEvidence(projectId, searchQuery.trim())
       setSearchResults(response.data?.results || [])
+      if (response.data?.index) setIndexStatus(response.data.index)
+      setSearchTrace(response.data?.retrieval || null)
     } catch (err) {
       setError(err.message || 'Search failed')
     } finally {
       setSearching(false)
+    }
+  }
+
+  const handleSyncIndex = async () => {
+    try {
+      setSyncingIndex(true)
+      setError('')
+      const response = await syncEvidenceIndex(projectId)
+      setIndexStatus(response.data?.index || null)
+    } catch (err) {
+      setError(err.message || 'Could not refresh project context')
+    } finally {
+      setSyncingIndex(false)
     }
   }
 
@@ -157,6 +207,10 @@ export function ProjectIntelligence({ projectId }) {
     }
   }
 
+  const indexTone = indexStatus?.status === 'STALE'
+    ? 'stale'
+    : (indexStatus?.semantic?.status || 'empty').toLowerCase()
+
   return (
     <section className="project-intelligence-section">
       <div className="project-intelligence-title">
@@ -182,6 +236,29 @@ export function ProjectIntelligence({ projectId }) {
         </div>
       )}
 
+      {!loadingWorkspace && (
+        <div className={`intelligence-index-strip ${indexTone}`}>
+          <div className="intelligence-index-icon"><Database size={17} /></div>
+          <div className="intelligence-index-copy">
+            <div>
+              <strong>Project context index</strong>
+              <span className={`retrieval-mode-badge ${(indexStatus?.retrievalMode || 'LEXICAL').toLowerCase()}`}>
+                {indexStatus?.retrievalMode === 'HYBRID' ? 'Hybrid RAG' : 'Lexical fallback'}
+              </span>
+            </div>
+            <p>
+              {indexStatus?.indexedEvidence || 0} of {indexStatus?.sourceEvidence || 0} evidence chunks indexed · {indexStatus?.embeddedEvidence || 0} semantic vectors
+              {indexStatus?.staleEvidence > 0 ? ` · ${indexStatus.staleEvidence} updates pending` : ''}
+              {indexStatus?.semantic?.reason ? ` · ${indexStatus.semantic.reason}` : ''}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleSyncIndex} disabled={syncingIndex}>
+            <RefreshCcw size={13} className={syncingIndex ? 'spin-icon' : ''} />
+            {syncingIndex ? 'Indexing…' : 'Refresh context'}
+          </Button>
+        </div>
+      )}
+
       <div className={`project-intelligence-grid ${loadingWorkspace ? 'is-loading' : ''}`}>
         <div className="project-intelligence-card">
           <div className="intelligence-card-heading">
@@ -200,6 +277,12 @@ export function ProjectIntelligence({ projectId }) {
               {searching ? 'Searching…' : 'Search'}
             </Button>
           </form>
+          {searchTrace && (
+            <div className="search-retrieval-summary">
+              <span>{searchTrace.mode === 'HYBRID' ? 'Semantic + keyword retrieval' : 'Keyword retrieval'}</span>
+              <small>{searchTrace.candidateCount} candidates ranked · trace {searchTrace.version}</small>
+            </div>
+          )}
           {searchRan && searchResults.length === 0 ? (
             <p className="intelligence-empty">No indexed project evidence matched this search.</p>
           ) : (

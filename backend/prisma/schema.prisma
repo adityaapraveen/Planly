@@ -30,9 +30,10 @@ model Project {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  drawings      Drawing[]
-  questions     ProjectQuestion[]
-  checkSettings ProjectCheckSetting[]
+  drawings       Drawing[]
+  questions      ProjectQuestion[]
+  checkSettings  ProjectCheckSetting[]
+  evidenceChunks ProjectEvidenceChunk[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -51,6 +52,8 @@ model ProjectQuestion {
   provider         String?
   model            String?
   promptVersion    String                @default("cited-project-qa-v1")
+  retrievalMode    String                @default("LEXICAL")
+  retrievalTrace   Json?
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -59,6 +62,30 @@ model ProjectQuestion {
 
   @@index([projectId, createdAt])
   @@map("project_questions")
+}
+
+model ProjectEvidenceChunk {
+  id                  String  @id @default(uuid())
+  sourceId            String
+  evidenceType        String
+  title               String
+  content             String
+  contentHash         String
+  metadata            Json
+  embedding           Json?
+  embeddingModel      String?
+  embeddingDimensions Int?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, sourceId])
+  @@index([projectId, evidenceType])
+  @@index([projectId, updatedAt])
+  @@map("project_evidence_chunks")
 }
 
 model ProjectCheckSetting {
