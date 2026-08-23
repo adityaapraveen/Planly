@@ -175,7 +175,9 @@ Before a paid pilot:
 
 ```env
 AI_PROVIDER=openrouter
+AI_REQUIRE_FREE_MODELS=true
 OPENROUTER_API_KEY=replace-with-your-openrouter-key
+OPENROUTER_MODEL=dots-studio/dots-3-note-preview:free
 AI_EMBEDDING_ENABLED=true
 AI_EMBEDDING_PROVIDER=openrouter
 AI_EMBEDDING_MODEL=liquid/lfm-2.5-embedding-350m:free
@@ -186,6 +188,8 @@ AI_RERANK_PROVIDER=openrouter
 AI_RERANK_MODEL=nvidia/llama-nemotron-rerank-vl-1b-v2:free
 AI_RERANK_MAX_CANDIDATES=40
 ```
+
+The free reference stack uses separate specialist models rather than asking one model to do every job: [Dots3-Note](https://openrouter.ai/dots-studio/dots-3-note-preview%3Afree) handles page-image understanding and structured generation, Liquid LFM2.5 maps indexed text and queries into vectors, and NVIDIA Llama Nemotron reranks retrieved candidates. Configuration validation rejects duplicate active model identifiers, and `AI_REQUIRE_FREE_MODELS=true` rejects OpenRouter identifiers without the `:free` suffix.
 
 OpenRouter exposes an OpenAI-compatible embeddings endpoint. Planly uses it with float encoding, explicit query/document input types, bounded inputs, batched indexing, and cosine similarity. The default Liquid LFM2.5 embedding model is currently free and produces 1,024-dimensional vectors. Free-model availability and rate limits can change. OpenRouter states that successful requests to this Liquid model may be retained and used for training, so confidential projects must disable semantic indexing unless that data policy is acceptable. See the [OpenRouter embeddings API](https://openrouter.ai/docs/api/api-reference/embeddings/create-embeddings) and [model page](https://openrouter.ai/liquid/lfm-2.5-embedding-350m%3Afree/providers).
 
