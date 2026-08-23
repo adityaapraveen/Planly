@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import dotenv from 'dotenv'
+import { validateOpenRouterModelPolicy } from './model-policy.js'
 
 dotenv.config()
 
@@ -28,6 +29,8 @@ const envSchema = z.object({
         'openai',
         'openrouter'
     ]),
+    AI_REQUIRE_FREE_MODELS: z.enum(['true', 'false']).default('false')
+        .transform((value) => value === 'true'),
 
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().optional(),
@@ -48,7 +51,8 @@ const envSchema = z.object({
     AI_RERANK_MAX_CANDIDATES: z.coerce.number().int().min(2).max(100).default(40),
 
     OPENROUTER_API_KEY: z.string().optional(),
-    OPENROUTER_MODEL: z.string().optional(),
+    OPENROUTER_MODEL: z.string().trim().min(1)
+        .default('dots-studio/dots-3-note-preview:free'),
 
     AI_REQUEST_TIMEOUT_MS: z.coerce
         .number()
@@ -126,6 +130,31 @@ const envSchema = z.object({
             message: 'An OpenRouter API key is required when reranking is enabled'
         })
     }
+
+    const modelPolicyViolations = validateOpenRouterModelPolicy({
+        requireFree: env.AI_REQUIRE_FREE_MODELS,
+        models: [
+            env.AI_PROVIDER === 'openrouter' && {
+                field: 'OPENROUTER_MODEL',
+                model: env.OPENROUTER_MODEL
+            },
+            env.AI_EMBEDDING_ENABLED && env.AI_EMBEDDING_PROVIDER === 'openrouter' && {
+                field: 'AI_EMBEDDING_MODEL',
+                model: env.AI_EMBEDDING_MODEL
+            },
+            env.AI_RERANK_ENABLED && {
+                field: 'AI_RERANK_MODEL',
+                model: env.AI_RERANK_MODEL
+            }
+        ]
+    })
+    for (const violation of modelPolicyViolations) {
+        context.addIssue({
+            code: 'custom',
+            path: [violation.field],
+            message: violation.message
+        })
+    }
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -153,6 +182,7 @@ export const config = {
     COOKIE_EXPIRES_IN: parsed.data.COOKIE_EXPIRES_IN,
 
     AI_PROVIDER: parsed.data.AI_PROVIDER,
+    AI_REQUIRE_FREE_MODELS: parsed.data.AI_REQUIRE_FREE_MODELS,
     OPENAI_MODEL: parsed.data.OPENAI_MODEL,
     OPENAI_API_KEY: parsed.data.OPENAI_API_KEY,
     AI_EMBEDDING_ENABLED: parsed.data.AI_EMBEDDING_ENABLED,

@@ -191,6 +191,9 @@ Important operational settings:
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
+| `AI_PROVIDER` | Text and drawing-vision generation provider | `openrouter` in `.env.example` |
+| `OPENROUTER_MODEL` | Drawing analysis and cited-answer model | `dots-studio/dots-3-note-preview:free` |
+| `AI_REQUIRE_FREE_MODELS` | Reject active OpenRouter model IDs without `:free` | `false` (`true` in `.env.example`) |
 | `AI_REQUEST_TIMEOUT_MS` | Per-provider request timeout | `120000` |
 | `AI_MAX_RETRIES` | Provider SDK retries | `0` |
 | `AI_PROMPT_VERSION` | Stored with each analysis run | `v1` |
@@ -208,7 +211,9 @@ Important operational settings:
 | `ASSET_SIGNING_SECRET` | Dedicated HMAC secret for private asset links | Access-token secret fallback |
 | `TRUST_PROXY_HOPS` | Exact trusted reverse-proxy hop count | `0` |
 
-The default OpenRouter embedding model is currently free, but availability and rate limits may change. Its provider states that successful embedding inputs may be retained and used for training. Disable `AI_EMBEDDING_ENABLED` for confidential projects unless that data policy is acceptable.
+The recommended stack deliberately uses three different free models: Dots3-Note for drawing vision and structured generation, Liquid LFM2.5 for text embeddings, and NVIDIA Llama Nemotron for reranking. The configuration validator rejects duplicate active model identifiers. With `AI_REQUIRE_FREE_MODELS=true`, it also rejects OpenRouter model IDs that do not end in `:free`.
+
+Free availability and rate limits may change. Free providers may log or retain inputs for model improvement. Do not send confidential project drawings unless each active provider's current data policy is acceptable; otherwise disable the feature or move to approved paid/ZDR endpoints.
 
 ## API overview
 
