@@ -9,9 +9,13 @@ const providers = {
 }
 
 const provider = providers[config.AI_PROVIDER]
+const embeddingProvider = providers[config.AI_EMBEDDING_PROVIDER]
 
 if (!provider) {
     throw new Error(`Unsupported AI provider: ${config.AI_PROVIDER}`)
+}
+if (!embeddingProvider) {
+    throw new Error(`Unsupported embedding provider: ${config.AI_EMBEDDING_PROVIDER}`)
 }
 
 const providerModels = {
@@ -26,13 +30,13 @@ export const getAIProviderMetadata = () => ({
 
 export const getEmbeddingCapability = () => ({
     enabled: config.AI_EMBEDDING_ENABLED,
-    available: config.AI_EMBEDDING_ENABLED && Boolean(provider.generateEmbeddings),
-    provider: config.AI_PROVIDER,
+    available: config.AI_EMBEDDING_ENABLED && Boolean(embeddingProvider.generateEmbeddings),
+    provider: config.AI_EMBEDDING_PROVIDER,
     model: config.AI_EMBEDDING_MODEL,
     dimensions: config.AI_EMBEDDING_DIMENSIONS
 })
 
-export const generateEmbeddings = async (inputs) => {
+export const generateEmbeddings = async (inputs, { inputType = 'search_document' } = {}) => {
     const capability = getEmbeddingCapability()
 
     if (!capability.enabled) {
@@ -43,12 +47,17 @@ export const generateEmbeddings = async (inputs) => {
         return {
             ...capability,
             vectors: [],
-            reason: `${config.AI_PROVIDER} does not provide embeddings in this configuration`
+            reason: `${config.AI_EMBEDDING_PROVIDER} does not provide embeddings in this configuration`
         }
     }
 
-    const normalizedInputs = inputs.map((value) => String(value || '').trim())
-    const vectors = await provider.generateEmbeddings({ inputs: normalizedInputs })
+    const normalizedInputs = inputs.map((value) =>
+        String(value || '').trim().slice(0, config.AI_EMBEDDING_INPUT_MAX_CHARS)
+    )
+    const vectors = await embeddingProvider.generateEmbeddings({
+        inputs: normalizedInputs,
+        inputType
+    })
 
     if (vectors.length !== normalizedInputs.length || vectors.some((vector) =>
         !Array.isArray(vector) || vector.length !== capability.dimensions ||

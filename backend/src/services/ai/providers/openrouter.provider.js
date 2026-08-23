@@ -46,6 +46,20 @@ const getResponseContent = (response) => {
 }
 
 export const openrouterProvider = {
+    generateEmbeddings: async ({ inputs, inputType }) => {
+        const response = await getClient().embeddings.create({
+            model: config.AI_EMBEDDING_MODEL,
+            input: inputs,
+            encoding_format: 'float',
+            dimensions: config.AI_EMBEDDING_DIMENSIONS,
+            input_type: inputType
+        })
+
+        return [...response.data]
+            .sort((left, right) => left.index - right.index)
+            .map((item) => item.embedding)
+    },
+
     generateText: async ({
         systemPrompt,
         userPrompt,
