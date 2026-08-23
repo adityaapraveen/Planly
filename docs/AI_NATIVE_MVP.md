@@ -171,15 +171,18 @@ Before a paid pilot:
 ## Configuration
 
 ```env
-AI_PROVIDER=openai
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=replace-with-your-openrouter-key
 AI_EMBEDDING_ENABLED=true
-AI_EMBEDDING_MODEL=text-embedding-3-small
-AI_EMBEDDING_DIMENSIONS=256
+AI_EMBEDDING_PROVIDER=openrouter
+AI_EMBEDDING_MODEL=liquid/lfm-2.5-embedding-350m:free
+AI_EMBEDDING_DIMENSIONS=1024
+AI_EMBEDDING_INPUT_MAX_CHARS=1600
 ```
 
-OpenAI’s embeddings API returns vectors that can be stored and used for semantic similarity; the current implementation uses the documented `embeddings.create` request, float encoding, configurable dimensions, and cosine similarity. See the [OpenAI embeddings guide](https://developers.openai.com/api/docs/guides/embeddings).
+OpenRouter exposes an OpenAI-compatible embeddings endpoint. Planly uses it with float encoding, explicit query/document input types, bounded inputs, batched indexing, and cosine similarity. The default Liquid LFM2.5 embedding model is currently free and produces 1,024-dimensional vectors. Free-model availability and rate limits can change. OpenRouter states that successful requests to this Liquid model may be retained and used for training, so confidential projects must disable semantic indexing unless that data policy is acceptable. See the [OpenRouter embeddings API](https://openrouter.ai/docs/api/api-reference/embeddings/create-embeddings) and [model page](https://openrouter.ai/liquid/lfm-2.5-embedding-350m%3Afree/providers).
 
-Providers without an embedding implementation remain valid for generation and automatically use lexical retrieval.
+Generation and embedding providers are configured independently. If embeddings are disabled or unavailable, Planly automatically uses lexical retrieval and records the fallback reason.
 
 ## Definition of MVP done
 

@@ -34,8 +34,12 @@ const envSchema = z.object({
 
     AI_EMBEDDING_ENABLED: z.enum(['true', 'false']).default('true')
         .transform((value) => value === 'true'),
-    AI_EMBEDDING_MODEL: z.string().trim().min(1).default('text-embedding-3-small'),
-    AI_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(1536).default(256),
+    AI_EMBEDDING_PROVIDER: z.enum(['openai', 'openrouter']).default('openrouter'),
+    AI_EMBEDDING_MODEL: z.string().trim().min(1)
+        .default('liquid/lfm-2.5-embedding-350m:free'),
+    AI_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(3072).default(1024),
+    AI_EMBEDDING_INPUT_MAX_CHARS: z.coerce.number().int().min(256).max(32_000)
+        .default(1600),
 
     OPENROUTER_API_KEY: z.string().optional(),
     OPENROUTER_MODEL: z.string().optional(),
@@ -83,6 +87,31 @@ const envSchema = z.object({
             message: `A model is required for the ${env.AI_PROVIDER} provider`
         })
     }
+
+    if (env.AI_EMBEDDING_ENABLED) {
+        const embeddingKey = env.AI_EMBEDDING_PROVIDER === 'openrouter'
+            ? env.OPENROUTER_API_KEY
+            : env.OPENAI_API_KEY
+        if (!embeddingKey?.trim()) {
+            context.addIssue({
+                code: 'custom',
+                path: [env.AI_EMBEDDING_PROVIDER === 'openrouter'
+                    ? 'OPENROUTER_API_KEY'
+                    : 'OPENAI_API_KEY'],
+                message: `An API key is required for the ${env.AI_EMBEDDING_PROVIDER} embedding provider`
+            })
+        }
+        if (
+            env.AI_EMBEDDING_MODEL === 'liquid/lfm-2.5-embedding-350m:free' &&
+            env.AI_EMBEDDING_DIMENSIONS !== 1024
+        ) {
+            context.addIssue({
+                code: 'custom',
+                path: ['AI_EMBEDDING_DIMENSIONS'],
+                message: 'The configured Liquid embedding model requires 1024 dimensions'
+            })
+        }
+    }
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -113,8 +142,10 @@ export const config = {
     OPENAI_MODEL: parsed.data.OPENAI_MODEL,
     OPENAI_API_KEY: parsed.data.OPENAI_API_KEY,
     AI_EMBEDDING_ENABLED: parsed.data.AI_EMBEDDING_ENABLED,
+    AI_EMBEDDING_PROVIDER: parsed.data.AI_EMBEDDING_PROVIDER,
     AI_EMBEDDING_MODEL: parsed.data.AI_EMBEDDING_MODEL,
     AI_EMBEDDING_DIMENSIONS: parsed.data.AI_EMBEDDING_DIMENSIONS,
+    AI_EMBEDDING_INPUT_MAX_CHARS: parsed.data.AI_EMBEDDING_INPUT_MAX_CHARS,
     OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL,
     AI_REQUEST_TIMEOUT_MS: parsed.data.AI_REQUEST_TIMEOUT_MS,

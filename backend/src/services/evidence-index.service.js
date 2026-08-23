@@ -252,7 +252,9 @@ export const syncProjectEvidenceIndex = async ({ userId, projectId }) => {
 
 const queryEmbedding = async (query) => {
     try {
-        const response = await generateEmbeddings([query])
+        const response = await generateEmbeddings([query], {
+            inputType: 'search_query'
+        })
         return {
             vector: response.available ? response.vectors[0] : null,
             reason: response.reason || null

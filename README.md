@@ -20,7 +20,7 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - A cited sheet-reference graph with resolved, missing, ambiguous, and low-confidence states.
 - Clickable callout overlays that connect graph diagnostics to visible drawing evidence.
 - Project-wide search across sheet metadata, current findings, and cross-sheet references.
-- Persisted project evidence chunks with optional OpenAI embeddings and hybrid semantic + keyword ranking.
+- Persisted project evidence chunks with optional OpenRouter or OpenAI embeddings and hybrid semantic + keyword ranking.
 - Evidence-grounded drawing-set questions with persisted answers, confidence, sheet/page citations, and retrieval traces.
 - Visible lexical fallback when semantic indexing is disabled or unavailable.
 - Index-health controls plus an offline retrieval smoke eval with hit-rate and MRR gates.
@@ -194,14 +194,18 @@ Important operational settings:
 | `AI_REQUEST_TIMEOUT_MS` | Per-provider request timeout | `120000` |
 | `AI_MAX_RETRIES` | Provider SDK retries | `0` |
 | `AI_PROMPT_VERSION` | Stored with each analysis run | `v1` |
-| `AI_EMBEDDING_ENABLED` | Enables semantic indexing when the provider supports it | `true` |
-| `AI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
-| `AI_EMBEDDING_DIMENSIONS` | Stored embedding dimensions | `256` |
+| `AI_EMBEDDING_ENABLED` | Enables semantic indexing when the embedding provider supports it | `true` |
+| `AI_EMBEDDING_PROVIDER` | Provider used independently for embeddings | `openrouter` |
+| `AI_EMBEDDING_MODEL` | Embedding model identifier | `liquid/lfm-2.5-embedding-350m:free` |
+| `AI_EMBEDDING_DIMENSIONS` | Stored embedding dimensions | `1024` |
+| `AI_EMBEDDING_INPUT_MAX_CHARS` | Per-item safety cap for the free model's context | `1600` |
 | `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
 | `AI_QUESTION_DAILY_LIMIT` | Maximum cited project questions per user per UTC day | `50` |
 | `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |
 | `ASSET_SIGNING_SECRET` | Dedicated HMAC secret for private asset links | Access-token secret fallback |
 | `TRUST_PROXY_HOPS` | Exact trusted reverse-proxy hop count | `0` |
+
+The default OpenRouter embedding model is currently free, but availability and rate limits may change. Its provider states that successful embedding inputs may be retained and used for training. Disable `AI_EMBEDDING_ENABLED` for confidential projects unless that data policy is acceptable.
 
 ## API overview
 
