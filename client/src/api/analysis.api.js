@@ -16,9 +16,9 @@ export async function getDrawingAnalysis(drawingId, reviewMode = 'SUBMISSION_REA
   return apiFetch(`/api/drawings/${drawingId}/analysis?${params.toString()}`)
 }
 
-export async function updateAnalysisIssue(issueId, status) {
+export async function updateAnalysisIssue(issueId, review) {
   return apiFetch(`/api/analysis/issues/${issueId}`, {
     method: 'PATCH',
-    body: { status },
+    body: review,
   })
 }

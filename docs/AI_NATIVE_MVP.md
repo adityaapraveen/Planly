@@ -69,9 +69,10 @@ Planly ranks exact architectural identifiers and semantic intent together:
 1. keyword relevance weights titles and exact phrases;
 2. cosine similarity ranks embedded evidence;
 3. reciprocal rank fusion combines the two ranked lists without pretending their raw scores are comparable;
-4. only a bounded top set reaches the answer model.
+4. semantic candidates must clear a conservative absolute relevance gate;
+5. only a bounded top set reaches the answer model.
 
-Exact identifiers such as `A501` remain strong keyword signals, while questions such as “How can someone enter without using steps?” can retrieve an accessible-route note without exact word overlap.
+Exact identifiers such as `A501` remain strong keyword signals, while questions such as “How can someone enter without using steps?” can retrieve an accessible-route note without exact word overlap. If neither lexical evidence nor a sufficiently similar semantic candidate exists, Planly abstains before calling the answer model. The current threshold is an MVP safety default and must be calibrated on a reviewed real-project dataset before accuracy claims are made.
 
 ### Graceful degradation
 
@@ -99,7 +100,7 @@ Atlan describes useful enterprise AI as a context problem: metadata, lineage, qu
 - **Graph + semantic retrieval:** sheet references preserve explicit relationships; embeddings help with fuzzy intent.
 - **Versioned truth:** analyses, evidence, answer snapshots, prompt/model metadata, and revisions are persisted.
 - **Observable AI:** users can inspect retrieval mode, candidate counts, top candidates, citations, and fallback reasons.
-- **Human-on-the-loop:** AI proposes evidence-backed findings; a professional acknowledges, resolves, or dismisses them.
+- **Human-on-the-loop:** AI proposes evidence-backed findings; a professional acknowledges, resolves, dismisses, or reopens them, with an immutable actor/time/rationale history and required dismissal reasons.
 - **Evaluable components:** retrieval is tested separately from generation, and deterministic checks remain separate from probabilistic interpretation.
 
 Sources: [Atlan Context Lakehouse](https://atlan.com/context-lakehouse/), [Atlan Context Agents best practices](https://docs.atlan.com/product/capabilities/governance/context-agents-studio/best-practices/enrich-metadata-at-scale), and [Atlan App Framework](https://atlan.com/app-framework/).
@@ -118,6 +119,7 @@ The current smoke suite checks:
 - semantic retrieval without keyword overlap;
 - exact sheet/detail identifiers surviving hybrid fusion;
 - lexical fallback without a query vector;
+- hard-negative abstention when no evidence clears the relevance gate;
 - hit rate at 3 of 100%;
 - mean reciprocal rank of at least 0.90.
 
@@ -186,5 +188,6 @@ Providers without an embedding implementation remain valid for generation and au
 - A user can search and ask across the project with citations and inspect retrieval provenance.
 - The system visibly abstains or degrades when evidence or embeddings are unavailable.
 - Deterministic checks and revision comparison produce reviewable, repeatable results.
+- Reviewers can prioritize findings, follow or copy exact evidence links, record reasoned decisions, inspect immutable review history, and export a CSV review register.
 - Tests, schema validation, retrieval evals, lint, and production builds pass.
 - Limitations are stated honestly; the UI never represents AI output as professional approval.

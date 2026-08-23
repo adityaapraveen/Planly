@@ -108,7 +108,7 @@ export function ProjectDetail() {
           <EmptyState
             icon={FileText}
             title="No drawings uploaded"
-            description="Upload a PDF drawing to get started with AI-powered compliance analysis."
+            description="Upload a PDF drawing to start an evidence-led, AI-assisted advisory review."
             action={<Button onClick={() => openUpload()}><Upload size={16} /> Upload drawing</Button>}
           />
         ) : (

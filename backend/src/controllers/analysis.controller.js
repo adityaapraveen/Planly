@@ -22,8 +22,10 @@ const reviewModeSchema = z.object({
 })
 
 const issueStatusSchema = z.object({
-    status: z.enum(['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED'])
-})
+    status: z.enum(['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'DISMISSED']),
+    reason: z.string().trim().max(500).nullable().optional(),
+    note: z.string().trim().max(2000).nullable().optional()
+}).strict()
 
 const optionalMetadataValue = z.string().trim().max(500).nullable().optional()
 const sheetMetadataSchema = z.object({
@@ -93,11 +95,13 @@ export const getDrawingAnalysisController = asyncHandler(async (req, res) => {
 })
 
 export const updateAnalysisIssueController = asyncHandler(async (req, res) => {
-    const { status } = issueStatusSchema.parse(req.body)
+    const { status, reason, note } = issueStatusSchema.parse(req.body)
     const issue = await updateAnalysisIssueStatus({
         userId: req.user.id,
         issueId: req.params.issueId,
-        status
+        status,
+        reason,
+        note
     })
 
     res.status(200).json({

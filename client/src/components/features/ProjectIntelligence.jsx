@@ -35,11 +35,18 @@ function locationLabel(evidence) {
   return `Page ${evidence.pageNumber} · region ${x}%, ${y}%`
 }
 
+function evidenceHref(evidence) {
+  const params = new URLSearchParams({ page: String(evidence.pageNumber || 1) })
+  if (evidence.id?.startsWith('finding:')) params.set('finding', evidence.id.slice('finding:'.length))
+  if (evidence.id?.startsWith('reference:')) params.set('reference', evidence.id.slice('reference:'.length))
+  return `/drawings/${evidence.drawingId}/report?${params.toString()}`
+}
+
 function EvidenceLink({ evidence, compact = false }) {
   return (
     <Link
       className={`project-evidence ${compact ? 'compact' : ''}`}
-      to={`/drawings/${evidence.drawingId}/report`}
+      to={evidenceHref(evidence)}
     >
       <div>
         <span>{evidence.type || 'CHECK EVIDENCE'}</span>
@@ -295,7 +302,7 @@ export function ProjectIntelligence({ projectId }) {
         <div className="project-intelligence-card">
           <div className="intelligence-card-heading">
             <Sparkles size={18} />
-            <div><h3>Ask the drawing set</h3><p>Grounded answers, never model memory</p></div>
+            <div><h3>Ask the drawing set</h3><p>Citation-constrained answers from indexed project evidence</p></div>
           </div>
           <form className="intelligence-question-form" onSubmit={handleAsk}>
             <textarea

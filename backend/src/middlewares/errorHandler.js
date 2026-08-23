@@ -17,6 +17,10 @@ export const errorHandler = (error, req, res, next) => {
                 ? 'Invalid request payload for database query'
                 : (error.message || 'Internal server error')
 
+    const publicMessage = statusCode >= 500 && config.NODE_ENV !== 'dev'
+        ? 'The request could not be completed. Try again or contact support with the request ID.'
+        : message
+
     console.error(JSON.stringify({
         level: 'error',
         requestId: req.id,
@@ -30,7 +34,7 @@ export const errorHandler = (error, req, res, next) => {
 
     res.status(statusCode).json({
         success: false,
-        message,
+        message: publicMessage,
         requestId: req.id,
         ...(config.NODE_ENV === 'dev' && {
             stack: error.stack

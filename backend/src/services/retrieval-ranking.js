@@ -39,7 +39,8 @@ export const rankEvidenceChunks = ({
     query,
     tokens,
     queryEmbedding = null,
-    limit = 50
+    limit = 50,
+    semanticThreshold = 0.65
 }) => {
     const scored = chunks.map((chunk) => ({
         ...chunk,
@@ -50,7 +51,7 @@ export const rankEvidenceChunks = ({
         .filter((item) => item.lexicalScore > 0)
         .sort((left, right) => right.lexicalScore - left.lexicalScore)
     const semanticRanking = scored
-        .filter((item) => item.semanticScore !== null)
+        .filter((item) => item.semanticScore !== null && item.semanticScore >= semanticThreshold)
         .sort((left, right) => right.semanticScore - left.semanticScore)
     const lexicalRanks = ranksById(lexicalRanking)
     const semanticRanks = ranksById(semanticRanking)

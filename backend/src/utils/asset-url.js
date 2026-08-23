@@ -3,7 +3,7 @@ import { config } from '../config/config.js'
 import { AppError } from './AppError.js'
 
 const sign = (payload) => crypto
-    .createHmac('sha256', config.JWT_ACCESS_SECRET)
+    .createHmac('sha256', config.ASSET_SIGNING_SECRET)
     .update(payload)
     .digest('base64url')
 

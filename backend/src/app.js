@@ -19,7 +19,9 @@ import { assetRouter } from './routes/asset.routes.js'
 export const app = express()
 
 app.disable('x-powered-by')
-app.set('trust proxy', 1)
+if (config.TRUST_PROXY_HOPS > 0) {
+    app.set('trust proxy', config.TRUST_PROXY_HOPS)
+}
 app.use(requestContext)
 
 app.use(helmet({

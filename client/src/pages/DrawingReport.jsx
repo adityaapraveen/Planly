@@ -15,6 +15,7 @@ import { IssueSidebar } from '../components/analysis/IssueSidebar'
 import { SheetIndex } from '../components/analysis/SheetIndex'
 import { ReferenceGraph } from '../components/analysis/ReferenceGraph'
 import { Button } from '../components/ui/Button'
+import { Modal } from '../components/ui/Modal'
 import { PageLoader } from '../components/ui/Spinner'
 import './DrawingReport.css'
 
@@ -41,6 +42,11 @@ function toApiUrl(rawPath) {
   return `${safeBase}${normalizedPath}`
 }
 
+function escapeCsv(value) {
+  const text = String(value ?? '')
+  return `"${text.replaceAll('"', '""')}"`
+}
+
 function mapPages(pages) {
   return (pages || []).map((page) => {
     return {
@@ -61,6 +67,10 @@ export function DrawingReport() {
   const [selectedReferenceId, setSelectedReferenceId] = useState(null)
   const [interactionMessage, setInteractionMessage] = useState('')
   const [savingSheetId, setSavingSheetId] = useState(null)
+  const [decisionTarget, setDecisionTarget] = useState(null)
+  const [decisionReason, setDecisionReason] = useState('')
+  const [decisionNote, setDecisionNote] = useState('')
+  const [savingDecision, setSavingDecision] = useState(false)
   const pageRefs = useRef({})
 
   const fetchReport = useCallback(async () => {
@@ -88,6 +98,17 @@ export function DrawingReport() {
       ? { ...report, analysis: modeAnalysis }
       : null
     setDrawing(nextDrawing)
+
+    const params = new URLSearchParams(window.location.search)
+    const linkedFindingId = params.get('finding')
+    const linkedReferenceId = params.get('reference')
+    if (linkedFindingId && modeAnalysis?.issues?.some((issue) => issue.id === linkedFindingId)) {
+      setSelectedIssueId(linkedFindingId)
+    }
+    if (linkedReferenceId && report?.referenceGraph?.references?.some((reference) => reference.id === linkedReferenceId)) {
+      setSelectedReferenceId(linkedReferenceId)
+    }
+
     return nextDrawing
   }, [fetchAnalysisForMode, fetchReport])
 
@@ -128,15 +149,30 @@ export function DrawingReport() {
     return () => clearInterval(timer)
   }, [drawing, loadDrawing, reviewMode])
 
-  const pages = useMemo(() => mapPages(drawing?.pages), [drawing?.pages])
-  const issues = useMemo(() => normalizeIssues(drawing?.analysis?.issues), [drawing?.analysis?.issues])
-  const references = useMemo(
-    () => drawing?.referenceGraph?.references || [],
-    [drawing?.referenceGraph?.references],
-  )
-  const pdfUrl = useMemo(() => {
-    return toApiUrl(drawing?.fileUrl || drawing?.filePath)
-  }, [drawing?.filePath, drawing?.fileUrl])
+  const drawingPages = drawing?.pages
+  const analysisIssues = drawing?.analysis?.issues
+  const graphReferences = drawing?.referenceGraph?.references
+  const pages = useMemo(() => mapPages(drawingPages), [drawingPages])
+  const issues = useMemo(() => normalizeIssues(analysisIssues), [analysisIssues])
+  const references = useMemo(() => graphReferences || [], [graphReferences])
+  const pdfUrl = toApiUrl(drawing?.fileUrl || drawing?.filePath)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const findingId = selectedIssueId || params.get('finding')
+    const referenceId = selectedReferenceId || params.get('reference')
+    const issue = findingId ? issues.find((candidate) => candidate.id === findingId) : null
+    const reference = referenceId ? references.find((candidate) => candidate.id === referenceId) : null
+    const pageNumber = Number(issue?.page || reference?.source?.pageNumber || params.get('page') || 1)
+
+    if (!issue && !reference && !params.has('page')) return
+
+    const node = pageRefs.current[pageNumber]
+    if (node) {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
+    }
+  }, [issues, references, selectedIssueId, selectedReferenceId])
 
   const handleRetry = async () => {
     try {
@@ -180,10 +216,32 @@ export function DrawingReport() {
     }
   }
 
-  const handleIssueStatusChange = async (issue, nextStatus) => {
+  const handleIssueStatusChange = (issue, nextStatus) => {
+    if (nextStatus === issue.status) return
+    setDecisionTarget({ issue, nextStatus })
+    setDecisionReason('')
+    setDecisionNote(issue.reviewerNote || '')
+  }
+
+  const closeDecisionModal = () => {
+    if (savingDecision) return
+    setDecisionTarget(null)
+    setDecisionReason('')
+    setDecisionNote('')
+  }
+
+  const saveFindingDecision = async () => {
+    if (!decisionTarget) return
+    if (decisionTarget.nextStatus === 'DISMISSED' && !decisionReason.trim()) return
+
     try {
+      setSavingDecision(true)
       setError('')
-      const res = await updateAnalysisIssue(issue.id, nextStatus)
+      const res = await updateAnalysisIssue(decisionTarget.issue.id, {
+        status: decisionTarget.nextStatus,
+        reason: decisionReason.trim() || null,
+        note: decisionNote.trim() || null,
+      })
       const updatedIssue = res.data?.issue
 
       setDrawing((prev) => {
@@ -197,9 +255,48 @@ export function DrawingReport() {
           },
         }
       })
+      setInteractionMessage('Human decision saved to the immutable finding audit trail.')
+      closeDecisionModal()
     } catch (err) {
       setError(err.message || 'Failed to update finding status')
+    } finally {
+      setSavingDecision(false)
+      setDecisionTarget(null)
     }
+  }
+
+  const handleCopyFindingLink = async (issue) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('finding', issue.id)
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      setInteractionMessage('Exact finding link copied to the clipboard.')
+    } catch {
+      setInteractionMessage(`Copy this finding link: ${url.toString()}`)
+    }
+  }
+
+  const handleExportFindings = () => {
+    const headers = ['Finding ID', 'Title', 'Severity', 'Category', 'Page', 'Model confidence', 'Status', 'Reviewer rationale', 'Reviewer note', 'Reviewed at']
+    const rows = issues.map((issue) => [
+      issue.id,
+      issue.title,
+      issue.severity,
+      issue.category,
+      issue.page,
+      issue.confidence,
+      issue.status || 'OPEN',
+      issue.reviewReason,
+      issue.reviewerNote,
+      issue.reviewedAt,
+    ])
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${drawing.fileName.replace(/\.pdf$/i, '')}-${reviewMode.toLowerCase()}-review-register.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   const registerPageRef = (pageNumber, node) => {
@@ -377,10 +474,64 @@ export function DrawingReport() {
               selectedIssueId={selectedIssueId}
               onSelectIssue={handleSelectIssue}
               onStatusChange={handleIssueStatusChange}
+              onCopyLink={handleCopyFindingLink}
+              onExport={handleExportFindings}
             />
           </div>
         </>
       )}
+
+      <Modal
+        isOpen={!!decisionTarget}
+        onClose={closeDecisionModal}
+        title="Record human decision"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={closeDecisionModal} disabled={savingDecision}>Cancel</Button>
+            <Button
+              onClick={saveFindingDecision}
+              disabled={savingDecision || (decisionTarget?.nextStatus === 'DISMISSED' && !decisionReason.trim())}
+            >
+              {savingDecision ? 'Saving…' : 'Save decision'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="finding-decision-form">
+          <div className="finding-decision-context">
+            <span>{decisionTarget?.issue?.severity} finding · Page {decisionTarget?.issue?.page}</span>
+            <strong>{decisionTarget?.issue?.title}</strong>
+            <p>
+              Change from {decisionTarget?.issue?.status || 'OPEN'} to {decisionTarget?.nextStatus}.
+              The actor, rationale, and timestamp will be retained in the audit trail.
+            </p>
+          </div>
+          {['RESOLVED', 'DISMISSED'].includes(decisionTarget?.nextStatus) && (
+            <label>
+              <span>Reviewer rationale {decisionTarget?.nextStatus === 'DISMISSED' ? '(required)' : '(recommended)'}</span>
+              <input
+                value={decisionReason}
+                maxLength={500}
+                autoFocus
+                onChange={(event) => setDecisionReason(event.target.value)}
+                placeholder={decisionTarget?.nextStatus === 'DISMISSED' ? 'Why is this finding not applicable or incorrect?' : 'What evidence confirms resolution?'}
+              />
+            </label>
+          )}
+          <label>
+            <span>Review note (optional)</span>
+            <textarea
+              value={decisionNote}
+              maxLength={2000}
+              rows={4}
+              autoFocus={!['RESOLVED', 'DISMISSED'].includes(decisionTarget?.nextStatus)}
+              onChange={(event) => setDecisionNote(event.target.value)}
+              placeholder="Add project context or follow-up instructions."
+            />
+          </label>
+          <p className="finding-decision-disclaimer">AI findings are advisory. This decision records professional review; it is not a certification of compliance.</p>
+        </div>
+      </Modal>
     </div>
   )
 }

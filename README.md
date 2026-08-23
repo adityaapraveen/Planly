@@ -24,7 +24,7 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - Evidence-grounded drawing-set questions with persisted answers, confidence, sheet/page citations, and retrieval traces.
 - Visible lexical fallback when semantic indexing is disabled or unavailable.
 - Index-health controls plus an offline retrieval smoke eval with hit-rate and MRR gates.
-- Explicit insufficient-evidence behavior and rejection of invented AI citations.
+- Explicit insufficient-evidence behavior, conservative semantic relevance gating, and rejection of invented AI citations.
 - A versioned, project-configurable deterministic check library with live pass/fail results.
 - Drawing revision relationships with deterministic sheet and finding comparison.
 - Side-by-side source evidence for added, removed, modified, and unchanged sheets.
@@ -38,6 +38,9 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - Strict validation of structured AI responses.
 - Evidence locations rendered as drawing overlays.
 - Versioned analysis runs with provider, model, prompt, duration, attempt, and error metadata.
+- Prioritized finding review queue with search, active/decided filters, and CSV review-register export.
+- Immutable human decision events with reviewer identity, timestamps, rationale, notes, and required dismissal reasons.
+- Exact finding/reference deep links from cited project evidence into the drawing review workspace.
 - Relational findings with open, acknowledged, resolved, and dismissed states.
 - PostgreSQL-backed recovery of interrupted runs without BullMQ or Redis.
 - In-process concurrency control for a single API instance.
@@ -197,6 +200,8 @@ Important operational settings:
 | `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
 | `AI_QUESTION_DAILY_LIMIT` | Maximum cited project questions per user per UTC day | `50` |
 | `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |
+| `ASSET_SIGNING_SECRET` | Dedicated HMAC secret for private asset links | Access-token secret fallback |
+| `TRUST_PROXY_HOPS` | Exact trusted reverse-proxy hop count | `0` |
 
 ## API overview
 
@@ -222,7 +227,7 @@ All project and analysis routes require a bearer access token unless noted.
 | `GET` | `/api/drawings/:drawingId/analysis` | Get the latest run for a mode |
 | `GET` | `/api/drawings/:drawingId/report` | Get drawing, pages, and signed URLs |
 | `PATCH` | `/api/sheets/:sheetId` | Correct or confirm extracted sheet metadata |
-| `PATCH` | `/api/analysis/issues/:issueId` | Update human review status |
+| `PATCH` | `/api/analysis/issues/:issueId` | Record an audited human decision, rationale, and note |
 | `GET` | `/api/assets/...` | Read an asset using an expiring signature |
 | `GET` | `/api/v1/health` | Health check; public |
 
@@ -249,7 +254,8 @@ To force a new versioned run:
 10. Findings are normalized and persisted as relational `AnalysisIssue` records.
 11. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
 12. The client polls only while the selected run is pending or processing.
-13. A reviewer corrects the sheet index, inspects cited graph edges, and confirms, resolves, or dismisses each finding.
+13. A reviewer corrects the sheet index, inspects cited graph edges, and records an acknowledged, resolved, dismissed, or reopened decision.
+14. Every decision transition preserves reviewer identity, time, rationale, and note; dismissals require a reason.
 
 Malformed model output fails the run. It is never silently converted into a successful report with no findings.
 

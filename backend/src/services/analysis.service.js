@@ -20,13 +20,22 @@ import {
 } from './sheet-index.service.js'
 import { resolveSheetReferences } from './sheet-reference.service.js'
 import { analysisFailureData } from './analysis-error.js'
+import { buildFindingReviewChange } from './finding-review.js'
+
+const reviewEventInclude = {
+    orderBy: { createdAt: 'desc' },
+    include: {
+        reviewer: { select: { id: true, name: true } }
+    }
+}
 
 const analysisInclude = {
     issues: {
         orderBy: [
             { page: 'asc' },
             { createdAt: 'asc' }
-        ]
+        ],
+        include: { reviewEvents: reviewEventInclude }
     }
 }
 
@@ -423,7 +432,9 @@ export const getDrawingAnalysis = async ({
 export const updateAnalysisIssueStatus = async ({
     userId,
     issueId,
-    status
+    status,
+    reason,
+    note
 }) => {
     const issue = await prisma.analysisIssue.findFirst({
         where: {
@@ -440,9 +451,27 @@ export const updateAnalysisIssueStatus = async ({
         throw new AppError('Analysis issue not found', 404)
     }
 
-    const updatedIssue = await prisma.analysisIssue.update({
-        where: { id: issue.id },
-        data: { status }
+    const reviewChange = buildFindingReviewChange({
+        issue,
+        status,
+        reason,
+        note
+    })
+
+    const updatedIssue = await prisma.$transaction(async (tx) => {
+        await tx.analysisIssueReviewEvent.create({
+            data: {
+                ...reviewChange.event,
+                issueId: issue.id,
+                reviewerId: userId
+            }
+        })
+
+        return tx.analysisIssue.update({
+            where: { id: issue.id },
+            data: reviewChange.issueUpdate,
+            include: { reviewEvents: reviewEventInclude }
+        })
     })
 
     return serializeIssue(updatedIssue)
