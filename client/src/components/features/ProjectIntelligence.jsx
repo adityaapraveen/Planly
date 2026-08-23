@@ -89,7 +89,10 @@ function AnswerCard({ answer }) {
       {trace && (
         <details className="answer-retrieval-trace">
           <summary>
-            <span>{answer.retrievalMode === 'HYBRID' ? 'Hybrid RAG' : 'Lexical retrieval'}</span>
+            <span>
+              {answer.retrievalMode === 'HYBRID' ? 'Hybrid RAG' : 'Lexical retrieval'}
+              {trace.rerank?.status === 'APPLIED' ? ' + reranking' : ''}
+            </span>
             <small>{trace.candidateCount} candidates · {trace.returnedCount} context items</small>
           </summary>
           <div>
@@ -97,12 +100,15 @@ function AnswerCard({ answer }) {
             {(trace.topCandidates || []).slice(0, 5).map((candidate) => (
               <span key={candidate.id}>
                 #{candidate.rank} {candidate.id}
-                {candidate.semanticScore !== null && candidate.semanticScore !== undefined
-                  ? ` · ${Math.round(candidate.semanticScore * 100)}% semantic`
-                  : ` · lexical ${candidate.lexicalScore}`}
+                {candidate.rerankScore !== null && candidate.rerankScore !== undefined
+                  ? ` · ${Math.round(candidate.rerankScore * 100)}% rerank relevance`
+                  : candidate.semanticScore !== null && candidate.semanticScore !== undefined
+                    ? ` · ${Math.round(candidate.semanticScore * 100)}% semantic`
+                    : ` · lexical ${candidate.lexicalScore}`}
               </span>
             ))}
-            {trace.semanticFallbackReason && <p>Fallback: {trace.semanticFallbackReason}</p>}
+            {trace.semanticFallbackReason && <p>Embedding fallback: {trace.semanticFallbackReason}</p>}
+            {trace.rerank?.status === 'FALLBACK' && <p>Rerank fallback: {trace.rerank.reason}</p>}
           </div>
         </details>
       )}
@@ -286,7 +292,10 @@ export function ProjectIntelligence({ projectId }) {
           </form>
           {searchTrace && (
             <div className="search-retrieval-summary">
-              <span>{searchTrace.mode === 'HYBRID' ? 'Semantic + keyword retrieval' : 'Keyword retrieval'}</span>
+              <span>
+                {searchTrace.mode === 'HYBRID' ? 'Semantic + keyword retrieval' : 'Keyword retrieval'}
+                {searchTrace.rerank?.status === 'APPLIED' ? ' · reranked' : ''}
+              </span>
               <small>{searchTrace.candidateCount} candidates ranked · trace {searchTrace.version}</small>
             </div>
           )}

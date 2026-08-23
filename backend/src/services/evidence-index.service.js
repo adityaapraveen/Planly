@@ -4,10 +4,13 @@ import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/AppError.js'
 import {
     generateEmbeddings,
-    getEmbeddingCapability
+    getEmbeddingCapability,
+    getRerankCapability,
+    rerankDocuments
 } from './ai/ai.service.js'
 import { loadProjectEvidence } from './project-evidence.service.js'
 import { rankEvidenceChunks } from './retrieval-ranking.js'
+import { applyRerankResults } from './reranking.js'
 
 const EMBEDDING_BATCH_SIZE = 64
 const MAX_INDEXED_EVIDENCE = 3000
@@ -303,7 +306,59 @@ export const retrieveProjectEvidence = async ({
         queryEmbedding: semantic.vector,
         limit
     })
-    const results = ranking.results.map((item) => ({
+    const rerankCapability = getRerankCapability()
+    let rankedResults = ranking.results
+    let rerankTrace = {
+        status: rerankCapability.enabled ? 'SKIPPED' : 'DISABLED',
+        provider: rerankCapability.provider,
+        model: rerankCapability.model,
+        candidateCount: 0,
+        reason: rerankCapability.enabled ? 'Not enough retrieval candidates to rerank' : 'Reranking is disabled'
+    }
+
+    if (rerankCapability.available && ranking.results.length >= 2) {
+        try {
+            const response = await rerankDocuments({
+                query,
+                documents: ranking.results.map((item) => `${item.title}\n${item.content}`)
+            })
+            if (response.results.length > 0) {
+                rankedResults = applyRerankResults({
+                    candidates: ranking.results,
+                    results: response.results
+                })
+                rerankTrace = {
+                    status: 'APPLIED',
+                    provider: response.provider,
+                    model: response.model,
+                    candidateCount: response.candidateCount,
+                    reason: null
+                }
+            } else {
+                rerankTrace = {
+                    ...rerankTrace,
+                    status: 'SKIPPED',
+                    reason: response.reason
+                }
+            }
+        } catch (error) {
+            rerankTrace = {
+                ...rerankTrace,
+                status: 'FALLBACK',
+                reason: 'Reranking failed; first-stage retrieval order was preserved'
+            }
+            console.warn(JSON.stringify({
+                level: 'warn',
+                event: 'evidence_rerank_failed',
+                projectId,
+                errorName: error?.name,
+                errorCode: error?.code,
+                message: error?.message
+            }))
+        }
+    }
+
+    const results = rankedResults.map((item) => ({
         ...item.metadata,
         relevance: item.relevance,
         retrieval: item.retrieval
@@ -313,19 +368,21 @@ export const retrieveProjectEvidence = async ({
         results,
         index,
         trace: {
-            version: 'hybrid-rag-v1',
+            version: 'hybrid-rag-v2',
             query,
             mode: ranking.mode,
             indexedEvidence: chunks.length,
             candidateCount: ranking.candidates,
             returnedCount: results.length,
             semanticFallbackReason: semantic.vector ? null : semantic.reason,
+            rerank: rerankTrace,
             topCandidates: results.slice(0, 10).map((item) => ({
                 id: item.id,
                 type: item.type,
-                rank: item.retrieval.rank,
+                rank: item.retrieval.rerankRank || item.retrieval.rank,
                 lexicalScore: item.retrieval.lexicalScore,
-                semanticScore: item.retrieval.semanticScore
+                semanticScore: item.retrieval.semanticScore,
+                rerankScore: item.retrieval.rerankScore ?? null
             }))
         }
     }

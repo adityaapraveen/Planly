@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 
 import { rankEvidenceChunks } from '../src/services/retrieval-ranking.js'
+import { applyRerankResults } from '../src/services/reranking.js'
 
 const chunks = [
     {
@@ -77,11 +78,24 @@ const hardNegative = rankEvidenceChunks({
     queryEmbedding: [-1, -1, -1],
     limit: 3
 })
+const rerankFixture = applyRerankResults({
+    candidates: chunks.slice(0, 3).map((chunk, index) => ({
+        ...chunk,
+        relevance: 1 / (60 + index + 1),
+        retrieval: { rank: index + 1, reasons: [] }
+    })),
+    results: [
+        { index: 2, relevance_score: 0.96 },
+        { index: 0, relevance_score: 0.51 },
+        { index: 1, relevance_score: 0.2 }
+    ]
+})
 const metrics = {
     positiveCases: cases.length,
     hitRateAt3: hitsAtThree / cases.length,
     meanReciprocalRank: reciprocalRank / cases.length,
-    hardNegativeAbstention: hardNegative.results.length === 0 ? 1 : 0
+    hardNegativeAbstention: hardNegative.results.length === 0 ? 1 : 0,
+    rerankContractPass: rerankFixture[0].sourceId === 'sheet-door-schedule' ? 1 : 0
 }
 
 console.log(JSON.stringify({ suite: 'project-retrieval-smoke-v2', metrics }, null, 2))
@@ -89,3 +103,4 @@ console.log(JSON.stringify({ suite: 'project-retrieval-smoke-v2', metrics }, nul
 assert.ok(metrics.hitRateAt3 >= 1, 'Expected hit rate@3 to remain at 100%')
 assert.ok(metrics.meanReciprocalRank >= 0.9, 'Expected MRR to remain at or above 0.9')
 assert.equal(metrics.hardNegativeAbstention, 1, 'Expected unrelated questions to return no evidence')
+assert.equal(metrics.rerankContractPass, 1, 'Expected rerank scores to control final candidate order')
