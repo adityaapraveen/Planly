@@ -40,6 +40,12 @@ const envSchema = z.object({
     AI_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(64).max(3072).default(1024),
     AI_EMBEDDING_INPUT_MAX_CHARS: z.coerce.number().int().min(256).max(32_000)
         .default(1600),
+    AI_RERANK_ENABLED: z.enum(['true', 'false']).default('true')
+        .transform((value) => value === 'true'),
+    AI_RERANK_PROVIDER: z.literal('openrouter').default('openrouter'),
+    AI_RERANK_MODEL: z.string().trim().min(1)
+        .default('nvidia/llama-nemotron-rerank-vl-1b-v2:free'),
+    AI_RERANK_MAX_CANDIDATES: z.coerce.number().int().min(2).max(100).default(40),
 
     OPENROUTER_API_KEY: z.string().optional(),
     OPENROUTER_MODEL: z.string().optional(),
@@ -112,6 +118,14 @@ const envSchema = z.object({
             })
         }
     }
+
+    if (env.AI_RERANK_ENABLED && !env.OPENROUTER_API_KEY?.trim()) {
+        context.addIssue({
+            code: 'custom',
+            path: ['OPENROUTER_API_KEY'],
+            message: 'An OpenRouter API key is required when reranking is enabled'
+        })
+    }
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -146,6 +160,10 @@ export const config = {
     AI_EMBEDDING_MODEL: parsed.data.AI_EMBEDDING_MODEL,
     AI_EMBEDDING_DIMENSIONS: parsed.data.AI_EMBEDDING_DIMENSIONS,
     AI_EMBEDDING_INPUT_MAX_CHARS: parsed.data.AI_EMBEDDING_INPUT_MAX_CHARS,
+    AI_RERANK_ENABLED: parsed.data.AI_RERANK_ENABLED,
+    AI_RERANK_PROVIDER: parsed.data.AI_RERANK_PROVIDER,
+    AI_RERANK_MODEL: parsed.data.AI_RERANK_MODEL,
+    AI_RERANK_MAX_CANDIDATES: parsed.data.AI_RERANK_MAX_CANDIDATES,
     OPENROUTER_API_KEY: parsed.data.OPENROUTER_API_KEY,
     OPENROUTER_MODEL: parsed.data.OPENROUTER_MODEL,
     AI_REQUEST_TIMEOUT_MS: parsed.data.AI_REQUEST_TIMEOUT_MS,

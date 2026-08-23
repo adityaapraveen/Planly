@@ -70,9 +70,12 @@ Planly ranks exact architectural identifiers and semantic intent together:
 2. cosine similarity ranks embedded evidence;
 3. reciprocal rank fusion combines the two ranked lists without pretending their raw scores are comparable;
 4. semantic candidates must clear a conservative absolute relevance gate;
-5. only a bounded top set reaches the answer model.
+5. an optional cross-encoder reranker directly compares the bounded candidates with the query;
+6. only the reranked, bounded top set reaches the answer model.
 
 Exact identifiers such as `A501` remain strong keyword signals, while questions such as “How can someone enter without using steps?” can retrieve an accessible-route note without exact word overlap. If neither lexical evidence nor a sufficiently similar semantic candidate exists, Planly abstains before calling the answer model. The current threshold is an MVP safety default and must be calibrated on a reviewed real-project dataset before accuracy claims are made.
+
+Reranking is useful here because the first stage intentionally favors recall across identifiers, AI findings, sheets, and references. The reranker adds precision before generation by evaluating each candidate against the full query. It is optional and failure-safe: timeouts, rate limits, malformed responses, or disabled configuration preserve the deterministic first-stage order and appear in the retrieval trace rather than failing search or Q&A.
 
 ### Graceful degradation
 
@@ -178,9 +181,15 @@ AI_EMBEDDING_PROVIDER=openrouter
 AI_EMBEDDING_MODEL=liquid/lfm-2.5-embedding-350m:free
 AI_EMBEDDING_DIMENSIONS=1024
 AI_EMBEDDING_INPUT_MAX_CHARS=1600
+AI_RERANK_ENABLED=true
+AI_RERANK_PROVIDER=openrouter
+AI_RERANK_MODEL=nvidia/llama-nemotron-rerank-vl-1b-v2:free
+AI_RERANK_MAX_CANDIDATES=40
 ```
 
 OpenRouter exposes an OpenAI-compatible embeddings endpoint. Planly uses it with float encoding, explicit query/document input types, bounded inputs, batched indexing, and cosine similarity. The default Liquid LFM2.5 embedding model is currently free and produces 1,024-dimensional vectors. Free-model availability and rate limits can change. OpenRouter states that successful requests to this Liquid model may be retained and used for training, so confidential projects must disable semantic indexing unless that data policy is acceptable. See the [OpenRouter embeddings API](https://openrouter.ai/docs/api/api-reference/embeddings/create-embeddings) and [model page](https://openrouter.ai/liquid/lfm-2.5-embedding-350m%3Afree/providers).
+
+The default reranker is OpenRouter's currently free NVIDIA Llama Nemotron Rerank VL model. Planly sends only the bounded text candidates selected by first-stage retrieval, validates returned indexes and scores, and records whether reranking was applied or bypassed. Free availability and provider data policies must be rechecked before a confidential pilot. See the [OpenRouter rerank API](https://openrouter.ai/docs/api/api-reference/rerank/create-rerank) and [free rerank model page](https://openrouter.ai/nvidia/llama-nemotron-rerank-vl-1b-v2%3Afree/api).
 
 Generation and embedding providers are configured independently. If embeddings are disabled or unavailable, Planly automatically uses lexical retrieval and records the fallback reason.
 

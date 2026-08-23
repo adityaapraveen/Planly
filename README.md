@@ -20,7 +20,7 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 - A cited sheet-reference graph with resolved, missing, ambiguous, and low-confidence states.
 - Clickable callout overlays that connect graph diagnostics to visible drawing evidence.
 - Project-wide search across sheet metadata, current findings, and cross-sheet references.
-- Persisted project evidence chunks with optional OpenRouter or OpenAI embeddings and hybrid semantic + keyword ranking.
+- Persisted project evidence chunks with optional OpenRouter or OpenAI embeddings, hybrid semantic + keyword retrieval, and optional OpenRouter cross-encoder reranking.
 - Evidence-grounded drawing-set questions with persisted answers, confidence, sheet/page citations, and retrieval traces.
 - Visible lexical fallback when semantic indexing is disabled or unavailable.
 - Index-health controls plus an offline retrieval smoke eval with hit-rate and MRR gates.
@@ -199,6 +199,9 @@ Important operational settings:
 | `AI_EMBEDDING_MODEL` | Embedding model identifier | `liquid/lfm-2.5-embedding-350m:free` |
 | `AI_EMBEDDING_DIMENSIONS` | Stored embedding dimensions | `1024` |
 | `AI_EMBEDDING_INPUT_MAX_CHARS` | Per-item safety cap for the free model's context | `1600` |
+| `AI_RERANK_ENABLED` | Enables second-stage reranking after hybrid retrieval | `true` |
+| `AI_RERANK_MODEL` | OpenRouter rerank model identifier | `nvidia/llama-nemotron-rerank-vl-1b-v2:free` |
+| `AI_RERANK_MAX_CANDIDATES` | Maximum first-stage candidates sent to reranking | `40` |
 | `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
 | `AI_QUESTION_DAILY_LIMIT` | Maximum cited project questions per user per UTC day | `50` |
 | `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |

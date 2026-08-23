@@ -4,12 +4,14 @@ import OpenAI from 'openai'
 
 import { config } from '../../../config/config.js'
 
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1'
+
 let client
 
 const getClient = () => {
     if (!client) {
         client = new OpenAI({
-            baseURL: 'https://openrouter.ai/api/v1',
+            baseURL: OPENROUTER_API_URL,
             apiKey: config.OPENROUTER_API_KEY,
             timeout: config.AI_REQUEST_TIMEOUT_MS,
             maxRetries: config.AI_MAX_RETRIES
@@ -58,6 +60,39 @@ export const openrouterProvider = {
         return [...response.data]
             .sort((left, right) => left.index - right.index)
             .map((item) => item.embedding)
+    },
+
+    rerank: async ({ query, documents, topN }) => {
+        const response = await fetch(`${OPENROUTER_API_URL}/rerank`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${config.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: config.AI_RERANK_MODEL,
+                query,
+                documents,
+                top_n: topN
+            }),
+            signal: AbortSignal.timeout(config.AI_REQUEST_TIMEOUT_MS)
+        })
+        const payload = await response.json().catch(() => null)
+
+        if (!response.ok) {
+            const error = new Error(
+                payload?.error?.message || `OpenRouter rerank failed with HTTP ${response.status}`
+            )
+            error.status = response.status
+            error.code = payload?.error?.code || 'OPENROUTER_RERANK_FAILED'
+            throw error
+        }
+
+        return {
+            model: payload?.model || config.AI_RERANK_MODEL,
+            provider: payload?.provider || 'openrouter',
+            results: payload?.results
+        }
     },
 
     generateText: async ({

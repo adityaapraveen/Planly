@@ -10,12 +10,16 @@ const providers = {
 
 const provider = providers[config.AI_PROVIDER]
 const embeddingProvider = providers[config.AI_EMBEDDING_PROVIDER]
+const rerankProvider = providers[config.AI_RERANK_PROVIDER]
 
 if (!provider) {
     throw new Error(`Unsupported AI provider: ${config.AI_PROVIDER}`)
 }
 if (!embeddingProvider) {
     throw new Error(`Unsupported embedding provider: ${config.AI_EMBEDDING_PROVIDER}`)
+}
+if (!rerankProvider) {
+    throw new Error(`Unsupported rerank provider: ${config.AI_RERANK_PROVIDER}`)
 }
 
 const providerModels = {
@@ -66,6 +70,53 @@ export const generateEmbeddings = async (inputs, { inputType = 'search_document'
     }
 
     return { ...capability, vectors, reason: null }
+}
+
+export const getRerankCapability = () => ({
+    enabled: config.AI_RERANK_ENABLED,
+    available: config.AI_RERANK_ENABLED && Boolean(rerankProvider.rerank),
+    provider: config.AI_RERANK_PROVIDER,
+    model: config.AI_RERANK_MODEL,
+    maxCandidates: config.AI_RERANK_MAX_CANDIDATES
+})
+
+export const rerankDocuments = async ({ query, documents }) => {
+    const capability = getRerankCapability()
+    if (!capability.enabled) {
+        return { ...capability, results: [], reason: 'Reranking is disabled' }
+    }
+    if (!capability.available) {
+        return { ...capability, results: [], reason: 'Reranking is unavailable' }
+    }
+
+    const boundedDocuments = documents
+        .slice(0, capability.maxCandidates)
+        .map((document) => String(document || '').trim().slice(0, 4000))
+    if (boundedDocuments.length < 2) {
+        return {
+            ...capability,
+            results: [],
+            reason: 'Not enough retrieval candidates to rerank'
+        }
+    }
+
+    const response = await rerankProvider.rerank({
+        query: String(query || '').trim().slice(0, 1000),
+        documents: boundedDocuments,
+        topN: boundedDocuments.length
+    })
+    if (!Array.isArray(response?.results)) {
+        throw new Error('Rerank provider returned an invalid response')
+    }
+
+    return {
+        ...capability,
+        model: response.model || capability.model,
+        provider: response.provider || capability.provider,
+        results: response.results,
+        candidateCount: boundedDocuments.length,
+        reason: null
+    }
 }
 
 export const generateAIResponse = async ({
