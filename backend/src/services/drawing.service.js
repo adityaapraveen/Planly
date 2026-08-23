@@ -178,7 +178,15 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
                         orderBy: [
                             { page: 'asc' },
                             { createdAt: 'asc' }
-                        ]
+                        ],
+                        include: {
+                            reviewEvents: {
+                                orderBy: { createdAt: 'desc' },
+                                include: {
+                                    reviewer: { select: { id: true, name: true } }
+                                }
+                            }
+                        }
                     }
                 }
             }

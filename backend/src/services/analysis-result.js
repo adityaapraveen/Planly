@@ -217,5 +217,21 @@ export const serializeIssue = (issue) => ({
     hasLocation: issue.hasLocation,
     explanation: issue.explanation,
     recommendation: issue.recommendation,
-    status: issue.status
+    status: issue.status,
+    reviewReason: issue.reviewReason || null,
+    reviewerNote: issue.reviewerNote || null,
+    reviewedAt: issue.reviewedAt || null,
+    reviewEvents: Array.isArray(issue.reviewEvents)
+        ? issue.reviewEvents.map((event) => ({
+            id: event.id,
+            previousStatus: event.previousStatus,
+            status: event.status,
+            reason: event.reason || null,
+            note: event.note || null,
+            reviewedAt: event.createdAt,
+            reviewer: event.reviewer
+                ? { id: event.reviewer.id, name: event.reviewer.name }
+                : null
+        }))
+        : []
 })

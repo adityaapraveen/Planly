@@ -31,7 +31,7 @@ const capabilities = [
     number: '03',
     icon: ShieldCheck,
     title: 'Keep humans in control',
-    description: 'Confirm metadata, change finding status, and preserve reviewer decisions when analysis is rerun.',
+    description: 'Confirm metadata and record reasoned finding decisions with reviewer identity and immutable history.',
   },
 ]
 

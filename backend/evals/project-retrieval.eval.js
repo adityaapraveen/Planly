@@ -70,13 +70,22 @@ for (const item of cases) {
     if (rank > 0) reciprocalRank += 1 / rank
 }
 
+const hardNegative = rankEvidenceChunks({
+    chunks,
+    query: 'What is the approved catering budget?',
+    tokens: ['approved', 'catering', 'budget'],
+    queryEmbedding: [-1, -1, -1],
+    limit: 3
+})
 const metrics = {
-    cases: cases.length,
+    positiveCases: cases.length,
     hitRateAt3: hitsAtThree / cases.length,
-    meanReciprocalRank: reciprocalRank / cases.length
+    meanReciprocalRank: reciprocalRank / cases.length,
+    hardNegativeAbstention: hardNegative.results.length === 0 ? 1 : 0
 }
 
-console.log(JSON.stringify({ suite: 'project-retrieval-smoke-v1', metrics }, null, 2))
+console.log(JSON.stringify({ suite: 'project-retrieval-smoke-v2', metrics }, null, 2))
 
 assert.ok(metrics.hitRateAt3 >= 1, 'Expected hit rate@3 to remain at 100%')
 assert.ok(metrics.meanReciprocalRank >= 0.9, 'Expected MRR to remain at or above 0.9')
+assert.equal(metrics.hardNegativeAbstention, 1, 'Expected unrelated questions to return no evidence')

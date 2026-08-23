@@ -453,6 +453,8 @@ Use specialized stages because one broad prompt cannot be evaluated or improved 
 
 ### P2.3 Human review workspace
 
+Implementation status as of August 20, 2026: the first auditable review slice is implemented. Reviewers receive a severity/confidence-prioritized queue with search and active/decided filters, can acknowledge, resolve, dismiss, or reopen findings, must provide a dismissal rationale, and can inspect immutable actor/time/rationale/note events. Exact finding links and CSV review-register export are available. Assignment, due dates, comments, bulk triage, saved server-side filters, stable cross-run finding lineage, and risk-class sign-off remain open.
+
 - Accept, edit, dismiss, resolve, and reopen.
 - Dismissal reason and false-positive category.
 - Assignee, due date, discipline, watcher, and comment.

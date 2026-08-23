@@ -54,6 +54,24 @@ test('rankEvidenceChunks preserves exact keyword evidence in hybrid ranking', ()
     assert.equal(ranking.results[0].retrieval.lexicalRank, 1)
 })
 
+test('rankEvidenceChunks abstains when semantic similarity does not clear the relevance gate', () => {
+    const ranking = rankEvidenceChunks({
+        query: 'What is the catering budget?',
+        tokens: ['catering', 'budget'],
+        queryEmbedding: [1, 1, 1],
+        chunks: [
+            chunk('door', 'A601 — Door schedule', 'Door types and hardware groups', [1, 0, 0]),
+            chunk('roof', 'A301 — Roof plan', 'Roof drainage plan', [0, 1, 0]),
+            chunk('site', 'C101 — Site plan', 'Parking and grading', [0, 0, 1])
+        ],
+        limit: 3
+    })
+
+    assert.equal(ranking.mode, 'LEXICAL')
+    assert.equal(ranking.candidates, 0)
+    assert.deepEqual(ranking.results, [])
+})
+
 test('rankEvidenceChunks degrades to lexical retrieval without a query vector', () => {
     const ranking = rankEvidenceChunks({
         query: 'door schedule',

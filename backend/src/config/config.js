@@ -9,6 +9,7 @@ const envSchema = z.object({
     CLIENT_URL: z
         .url()
         .default('http://localhost:5173'),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(2).default(0),
     DATABASE_URL: z
         .string()
         .min(1, 'DATABASE_URL is required'),
@@ -19,6 +20,7 @@ const envSchema = z.object({
     JWT_REFRESH_SECRET: z
         .string()
         .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+    ASSET_SIGNING_SECRET: z.string().min(32).optional(),
     JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
     COOKIE_EXPIRES_IN: z.coerce.number().int().positive().default(7),
@@ -96,11 +98,13 @@ export const config = {
     NODE_ENV: parsed.data.NODE_ENV,
 
     CLIENT_URL: parsed.data.CLIENT_URL,
+    TRUST_PROXY_HOPS: parsed.data.TRUST_PROXY_HOPS,
 
     DATABASE_URL: parsed.data.DATABASE_URL,
 
     JWT_ACCESS_SECRET: parsed.data.JWT_ACCESS_SECRET,
     JWT_REFRESH_SECRET: parsed.data.JWT_REFRESH_SECRET,
+    ASSET_SIGNING_SECRET: parsed.data.ASSET_SIGNING_SECRET || parsed.data.JWT_ACCESS_SECRET,
     JWT_ACCESS_EXPIRES_IN: parsed.data.JWT_ACCESS_EXPIRES_IN,
     JWT_REFRESH_EXPIRES_IN: parsed.data.JWT_REFRESH_EXPIRES_IN,
     COOKIE_EXPIRES_IN: parsed.data.COOKIE_EXPIRES_IN,

@@ -13,8 +13,9 @@ model User {
   email    String @unique
   password String
 
-  projects        Project[]
-  refreshSessions RefreshSession[]
+  projects            Project[]
+  refreshSessions     RefreshSession[]
+  findingReviewEvents AnalysisIssueReviewEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,9 +266,13 @@ model AnalysisIssue {
   explanation    String
   recommendation String
   status         AnalysisIssueStatus @default(OPEN)
+  reviewReason   String?
+  reviewerNote   String?
+  reviewedAt     DateTime?
 
   analysisId String
   analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  reviewEvents AnalysisIssueReviewEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -275,6 +280,26 @@ model AnalysisIssue {
   @@index([analysisId, status])
   @@index([severity])
   @@map("analysis_issues")
+}
+
+model AnalysisIssueReviewEvent {
+  id             String              @id @default(uuid())
+  previousStatus AnalysisIssueStatus
+  status         AnalysisIssueStatus
+  reason         String?
+  note           String?
+
+  issueId String
+  issue   AnalysisIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  reviewerId String
+  reviewer   User @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([issueId, createdAt])
+  @@index([reviewerId, createdAt])
+  @@map("analysis_issue_review_events")
 }
 
 model RefreshSession {
