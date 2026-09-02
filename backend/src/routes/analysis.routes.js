@@ -8,6 +8,7 @@ import {
     updateSheetMetadataController
 } from '../controllers/analysis.controller.js'
 import {
+    getDrawingPageArtifactsController,
     getDrawingReportController,
     getRevisionComparisonController
 } from '../controllers/drawing.controller.js'
@@ -41,6 +42,11 @@ analysisRouter.patch(
 analysisRouter.get(
     '/drawings/:drawingId/report',
     getDrawingReportController
+)
+
+analysisRouter.get(
+    '/drawings/:drawingId/pages/:pageNumber/artifacts',
+    getDrawingPageArtifactsController
 )
 
 analysisRouter.get(

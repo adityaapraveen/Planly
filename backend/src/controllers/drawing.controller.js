@@ -1,6 +1,12 @@
 import { asyncHandler } from '../middlewares/asyncHandler.js'
 
-import { getProjectDrawings, uploadProjectDrawing, deleteProjectDrawing, getDrawingReport } from '../services/drawing.service.js'
+import {
+    deleteProjectDrawing,
+    getDrawingPageArtifacts,
+    getDrawingReport,
+    getProjectDrawings,
+    uploadProjectDrawing
+} from '../services/drawing.service.js'
 
 import { startAnalysis } from '../services/analysis-runner.service.js'
 import { requestDrawingAnalysis } from '../services/analysis.service.js'
@@ -94,6 +100,19 @@ export const deleteProjectDrawingController = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Drawing deleted successfully'
+    })
+})
+
+export const getDrawingPageArtifactsController = asyncHandler(async (req, res) => {
+    const artifacts = await getDrawingPageArtifacts({
+        userId: req.user.id,
+        drawingId: req.params.drawingId,
+        pageNumber: req.params.pageNumber
+    })
+
+    res.status(200).json({
+        success: true,
+        data: { artifacts }
     })
 })
 

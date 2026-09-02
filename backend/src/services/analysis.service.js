@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js'
 import { config } from '../config/config.js'
 import { AppError } from '../utils/AppError.js'
 import { renderPdfPages } from './pdf-render.service.js'
+import { ensureNativePdfArtifacts } from './native-pdf-extraction.service.js'
 import {
     generateVisionResponse,
     getAIProviderMetadata
@@ -275,7 +276,7 @@ export const processAnalysisRun = async ({ analysisId, userId }) => {
 
     try {
         const systemPrompt = buildReviewSystemPrompt(run.reviewMode)
-        const pages = await renderPdfPages({
+        let pages = await renderPdfPages({
             drawingId: run.drawing.id,
             pdfPath: run.drawing.filePath
         })
@@ -283,6 +284,11 @@ export const processAnalysisRun = async ({ analysisId, userId }) => {
         if (!pages.length) {
             throw new AppError('Could not render PDF pages', 500)
         }
+
+        pages = await ensureNativePdfArtifacts({
+            pdfPath: run.drawing.filePath,
+            pages
+        })
 
         const pageResults = []
 
