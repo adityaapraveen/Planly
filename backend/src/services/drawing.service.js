@@ -156,6 +156,48 @@ export const deleteProjectDrawing = async ({ userId, projectId, drawingId }) => 
     return null
 }
 
+export const getDrawingPageArtifacts = async ({ userId, drawingId, pageNumber }) => {
+    const normalizedPageNumber = Number(pageNumber)
+    if (!Number.isInteger(normalizedPageNumber) || normalizedPageNumber < 1) {
+        throw new AppError('Invalid page number', 400)
+    }
+
+    const page = await prisma.drawingPage.findFirst({
+        where: {
+            drawingId,
+            pageNumber: normalizedPageNumber,
+            drawing: { project: { userId } }
+        },
+        select: {
+            id: true,
+            drawingId: true,
+            pageNumber: true,
+            nativeText: true,
+            nativeArtifacts: true,
+            nativeExtractionStatus: true,
+            nativeExtractionVersion: true,
+            nativeExtractionError: true,
+            nativeExtractedAt: true
+        }
+    })
+
+    if (!page) throw new AppError('Drawing page not found', 404)
+
+    return {
+        pageId: page.id,
+        drawingId: page.drawingId,
+        pageNumber: page.pageNumber,
+        status: page.nativeExtractionStatus,
+        version: page.nativeExtractionVersion,
+        extractedAt: page.nativeExtractedAt,
+        error: page.nativeExtractionError,
+        text: page.nativeText,
+        page: page.nativeArtifacts?.page || null,
+        items: page.nativeArtifacts?.items || [],
+        stats: page.nativeArtifacts?.stats || null
+    }
+}
+
 export const getDrawingReport = async ({ userId, drawingId }) => {
     const drawing = await prisma.drawing.findFirst({
         where: {
@@ -244,7 +286,16 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
                 drawingId: drawing.id,
                 assetType: 'page',
                 pageNumber: page.pageNumber
-            })
+            }),
+            nativeExtraction: {
+                status: page.nativeExtractionStatus,
+                version: page.nativeExtractionVersion,
+                extractedAt: page.nativeExtractedAt,
+                error: page.nativeExtractionError,
+                textAvailable: Boolean(page.nativeText),
+                page: page.nativeArtifacts?.page || null,
+                stats: page.nativeArtifacts?.stats || null
+            }
         }
 
         return normalized

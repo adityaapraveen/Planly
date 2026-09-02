@@ -143,6 +143,13 @@ model DrawingPage {
   imagePath String
   imageName String
 
+  nativeText              String?
+  nativeArtifacts         Json?
+  nativeExtractionStatus  NativePdfExtractionStatus @default(PENDING)
+  nativeExtractionVersion String?
+  nativeExtractionError   String?
+  nativeExtractedAt       DateTime?
+
   drawingId String
   drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
 
@@ -151,6 +158,7 @@ model DrawingPage {
 
   createdAt DateTime @default(now())
 
+  @@index([nativeExtractionStatus])
   @@map("drawing_pages")
 }
 
@@ -354,6 +362,13 @@ enum SheetReviewStatus {
   NEEDS_REVIEW
   CORRECTED
   CONFIRMED
+}
+
+enum NativePdfExtractionStatus {
+  PENDING
+  AVAILABLE
+  NO_TEXT
+  FAILED
 }
 
 enum SheetReferenceType {
