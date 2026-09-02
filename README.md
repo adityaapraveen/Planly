@@ -117,12 +117,13 @@ Planly/
 - npm.
 - PostgreSQL.
 - Poppler (`pdftoppm`) or GraphicsMagick/ImageMagick for PDF rendering.
+- Tesseract 5 with the configured language packs for local scanned-sheet OCR.
 - An OpenAI or OpenRouter API key.
 
-On Ubuntu/Debian, the PDF fallback can be installed with:
+On Ubuntu/Debian, the PDF and English OCR tools can be installed with:
 
 ```bash
-sudo apt-get install poppler-utils
+sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-eng
 ```
 
 ## Local setup
@@ -205,6 +206,11 @@ Important operational settings:
 | `AI_RERANK_ENABLED` | Enables second-stage reranking after hybrid retrieval | `true` |
 | `AI_RERANK_MODEL` | OpenRouter rerank model identifier | `nvidia/llama-nemotron-rerank-vl-1b-v2:free` |
 | `AI_RERANK_MAX_CANDIDATES` | Maximum first-stage candidates sent to reranking | `40` |
+| `OCR_ENABLED` | Enables local Tesseract fallback for scanned or text-sparse pages | `true` |
+| `OCR_LANGUAGES` | Installed Tesseract language set used for OCR | `eng` |
+| `OCR_TIMEOUT_MS` | Maximum time allowed for each region OCR process | `120000` |
+| `OCR_MIN_NATIVE_CHARS` | Native non-whitespace characters required to skip OCR | `80` |
+| `OCR_MIN_WORD_CONFIDENCE` | Minimum Tesseract word confidence retained | `35` |
 | `ANALYSIS_DAILY_LIMIT` | Maximum new runs per user per UTC day | `25` |
 | `AI_QUESTION_DAILY_LIMIT` | Maximum cited project questions per user per UTC day | `50` |
 | `ASSET_URL_TTL_SECONDS` | Signed drawing URL lifetime | `900` |
@@ -238,7 +244,7 @@ All project and analysis routes require a bearer access token unless noted.
 | `POST` | `/api/drawings/:drawingId/analyze` | Start or rerun a review mode |
 | `GET` | `/api/drawings/:drawingId/analysis` | Get the latest run for a mode |
 | `GET` | `/api/drawings/:drawingId/report` | Get drawing, pages, signed URLs, and native-extraction status |
-| `GET` | `/api/drawings/:drawingId/pages/:pageNumber/artifacts` | Get authorized native PDF text and coordinate-aware text items |
+| `GET` | `/api/drawings/:drawingId/pages/:pageNumber/artifacts` | Get authorized native/OCR text and coordinate-aware text items |
 | `PATCH` | `/api/sheets/:sheetId` | Correct or confirm extracted sheet metadata |
 | `PATCH` | `/api/analysis/issues/:issueId` | Record an audited human decision, rationale, and note |
 | `GET` | `/api/assets/...` | Read an asset using an expiring signature |
@@ -261,16 +267,17 @@ To force a new versioned run:
 4. The PDF is split into reusable rendered pages.
 5. PDF.js extracts native text objects, page geometry, rotation, and coordinate-aware text bounds before vision review. Scanned/no-text pages remain explicitly marked, and extraction failures do not masquerade as empty evidence.
 6. Planly renders a bounded set of six overlapping grid regions plus a probable title-block crop directly from the PDF. Each versioned crop retains full-page normalized coordinates and an explicit render status.
-7. Each page is reviewed using the selected mode. When available, the high-resolution title-block crop accompanies the overview image while the response contract continues to require full-page coordinates.
-8. The model response must satisfy the structured contract.
-9. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
-10. Visible callouts are persisted as graph edges and resolved against the corrected sheet index.
-11. Missing, ambiguous, and low-confidence reference targets are classified deterministically.
-12. Findings are normalized and persisted as relational `AnalysisIssue` records.
-13. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
-14. The client polls only while the selected run is pending or processing.
-15. A reviewer corrects the sheet index, inspects cited graph edges, and records an acknowledged, resolved, dismissed, or reopened decision.
-16. Every decision transition preserves reviewer identity, time, rationale, and note; dismissals require a reason.
+7. When native text is absent or sparse, local Tesseract OCR reads the high-resolution grid regions, maps word boxes back to full-page coordinates, removes overlap duplicates, and persists explicit OCR status and provenance.
+8. Each page is reviewed using the selected mode. When available, the high-resolution title-block crop and bounded OCR evidence accompany the overview image while the response contract continues to require full-page coordinates.
+9. The model response must satisfy the structured contract.
+10. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
+11. Visible callouts are persisted as graph edges and resolved against the corrected sheet index.
+12. Missing, ambiguous, and low-confidence reference targets are classified deterministically.
+13. Findings are normalized and persisted as relational `AnalysisIssue` records.
+14. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
+15. The client polls only while the selected run is pending or processing.
+16. A reviewer corrects the sheet index, inspects cited graph edges, and records an acknowledged, resolved, dismissed, or reopened decision.
+17. Every decision transition preserves reviewer identity, time, rationale, and note; dismissals require a reason.
 
 Malformed model output fails the run. It is never silently converted into a successful report with no findings.
 
@@ -329,7 +336,7 @@ npm run build
 - There is no organization, invitation, or role model yet.
 - There is no subscription billing or metered plan enforcement yet.
 - Full provider and browser end-to-end test suites remain to be implemented.
-- Hybrid retrieval currently scores bounded JSON vectors in the API process. Native PDF text is extracted but is not yet promoted into evidence chunks; raster-only OCR, symbol detection, PostgreSQL full-text search, and pgvector/HNSW are the next scaling steps before large drawing sets or multi-tenant production traffic.
+- Hybrid retrieval currently scores bounded JSON vectors in the API process. Native PDF and fallback OCR text are extracted but are not yet promoted into evidence chunks; symbol detection, table structure, PostgreSQL full-text search, and pgvector/HNSW are the next scaling steps before large drawing sets or multi-tenant production traffic.
 - The included retrieval eval is a deterministic smoke gate. A reviewed, real-project golden dataset is still required before making accuracy claims.
 - Check results are computed from current project data at request time; persisted historical check runs and release gates remain future work.
 - AI-generated findings require professional review and sign-off.

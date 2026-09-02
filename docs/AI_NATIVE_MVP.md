@@ -31,6 +31,8 @@ PDF drawing set
     ↓
 native text/geometry + overview and high-resolution regions
     ↓
+local OCR fallback for raster/text-sparse sheets
+    ↓
 versioned vision analysis
     ↓
 sheet metadata + references + findings

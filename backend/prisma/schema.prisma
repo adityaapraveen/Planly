@@ -150,6 +150,13 @@ model DrawingPage {
   nativeExtractionError   String?
   nativeExtractedAt       DateTime?
 
+  ocrText              String?
+  ocrArtifacts         Json?
+  ocrStatus            DrawingPageOcrStatus @default(PENDING)
+  ocrVersion           String?
+  ocrError             String?
+  ocrExtractedAt       DateTime?
+
   drawingId String
   drawing   Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
 
@@ -160,6 +167,7 @@ model DrawingPage {
   createdAt DateTime @default(now())
 
   @@index([nativeExtractionStatus])
+  @@index([ocrStatus])
   @@map("drawing_pages")
 }
 
@@ -398,6 +406,15 @@ enum SheetReviewStatus {
 
 enum NativePdfExtractionStatus {
   PENDING
+  AVAILABLE
+  NO_TEXT
+  FAILED
+}
+
+enum DrawingPageOcrStatus {
+  PENDING
+  DISABLED
+  NOT_REQUIRED
   AVAILABLE
   NO_TEXT
   FAILED
