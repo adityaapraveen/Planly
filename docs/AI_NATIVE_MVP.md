@@ -29,7 +29,9 @@ The MVP wedge is pre-issue drawing review for small architectural teams:
 ```text
 PDF drawing set
     ↓
-page rendering + versioned vision analysis
+native text/geometry + overview and high-resolution regions
+    ↓
+versioned vision analysis
     ↓
 sheet metadata + references + findings
     ↓

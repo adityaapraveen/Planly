@@ -136,7 +136,10 @@ export const deleteProjectDrawing = async ({ userId, projectId, drawingId }) => 
     try {
         pages = await prisma.drawingPage.findMany({
             where: { drawingId },
-            select: { imagePath: true }
+            select: {
+                imagePath: true,
+                regions: { select: { imagePath: true } }
+            }
         })
     } catch (error) {
         if (!isMissingDrawingPagesTableError(error)) throw error
@@ -150,7 +153,10 @@ export const deleteProjectDrawing = async ({ userId, projectId, drawingId }) => 
 
     await deleteStoredAssets([
         drawing.filePath,
-        ...pages.map((page) => page.imagePath)
+        ...pages.map((page) => page.imagePath),
+        ...pages.flatMap((page) =>
+            page.regions?.map((region) => region.imagePath) || []
+        )
     ])
 
     return null
@@ -250,7 +256,10 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
             orderBy: {
                 pageNumber: 'asc'
             },
-            include: { sheet: true }
+            include: {
+                sheet: true,
+                regions: { orderBy: { key: 'asc' } }
+            }
         })
         sheetReferences = await prisma.sheetReference.findMany({
             where: {
@@ -295,7 +304,31 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
                 textAvailable: Boolean(page.nativeText),
                 page: page.nativeArtifacts?.page || null,
                 stats: page.nativeArtifacts?.stats || null
-            }
+            },
+            regions: page.regions.map((region) => ({
+                id: region.id,
+                key: region.key,
+                kind: region.kind,
+                version: region.version,
+                status: region.status,
+                error: region.error,
+                location: {
+                    x: region.x,
+                    y: region.y,
+                    width: region.width,
+                    height: region.height
+                },
+                dpi: region.dpi,
+                pixelWidth: region.pixelWidth,
+                pixelHeight: region.pixelHeight,
+                imageUrl: region.status === 'AVAILABLE'
+                    ? createSignedAssetUrl({
+                        drawingId: drawing.id,
+                        assetType: 'region',
+                        regionId: region.id
+                    })
+                    : null
+            }))
         }
 
         return normalized

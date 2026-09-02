@@ -23,6 +23,31 @@ test('signed asset URLs verify for the intended drawing and page', () => {
     }))
 })
 
+test('signed region URLs bind the region identity', () => {
+    const url = createSignedAssetUrl({
+        drawingId: 'drawing-1',
+        assetType: 'region',
+        regionId: 'region-7'
+    })
+    const parsed = new URL(url, 'http://localhost')
+
+    assert.equal(parsed.pathname, '/api/assets/drawings/drawing-1/regions/region-7')
+    assert.doesNotThrow(() => verifySignedAssetRequest({
+        drawingId: 'drawing-1',
+        assetType: 'region',
+        regionId: 'region-7',
+        expires: parsed.searchParams.get('expires'),
+        signature: parsed.searchParams.get('signature')
+    }))
+    assert.throws(() => verifySignedAssetRequest({
+        drawingId: 'drawing-1',
+        assetType: 'region',
+        regionId: 'region-8',
+        expires: parsed.searchParams.get('expires'),
+        signature: parsed.searchParams.get('signature')
+    }), /Invalid asset link/)
+})
+
 test('signed asset URLs reject tampered asset identity', () => {
     const url = createSignedAssetUrl({
         drawingId: 'drawing-1',

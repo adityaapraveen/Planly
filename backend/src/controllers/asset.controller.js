@@ -31,6 +31,30 @@ export const getDrawingFile = asyncHandler(async (req, res) => {
     sendAsset(res, drawing.filePath, drawing.fileName)
 })
 
+export const getDrawingRegionImage = asyncHandler(async (req, res) => {
+    verifySignedAssetRequest({
+        drawingId: req.params.drawingId,
+        assetType: 'region',
+        regionId: req.params.regionId,
+        expires: req.query.expires,
+        signature: req.query.signature
+    })
+
+    const region = await prisma.drawingPageRegion.findFirst({
+        where: {
+            id: req.params.regionId,
+            page: { drawingId: req.params.drawingId },
+            status: 'AVAILABLE'
+        },
+        select: { imagePath: true, imageName: true }
+    })
+
+    if (!region?.imagePath || !region.imageName) {
+        throw new AppError('Drawing page region not found', 404)
+    }
+    sendAsset(res, region.imagePath, region.imageName)
+})
+
 export const getDrawingPageImage = asyncHandler(async (req, res) => {
     const pageNumber = Number(req.params.pageNumber)
 
