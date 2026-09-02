@@ -67,6 +67,12 @@ const envSchema = z.object({
         .max(5)
         .default(0),
     AI_PROMPT_VERSION: z.string().trim().min(1).default('v1'),
+    OCR_ENABLED: z.enum(['true', 'false']).default('true')
+        .transform((value) => value === 'true'),
+    OCR_LANGUAGES: z.string().trim().regex(/^[A-Za-z0-9_+.-]+$/).default('eng'),
+    OCR_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(600_000).default(120_000),
+    OCR_MIN_NATIVE_CHARS: z.coerce.number().int().min(0).max(10_000).default(80),
+    OCR_MIN_WORD_CONFIDENCE: z.coerce.number().min(0).max(100).default(35),
     ANALYSIS_DAILY_LIMIT: z.coerce.number().int().positive().default(25),
     AI_QUESTION_DAILY_LIMIT: z.coerce.number().int().positive().default(50),
     ASSET_URL_TTL_SECONDS: z.coerce
@@ -199,6 +205,11 @@ export const config = {
     AI_REQUEST_TIMEOUT_MS: parsed.data.AI_REQUEST_TIMEOUT_MS,
     AI_MAX_RETRIES: parsed.data.AI_MAX_RETRIES,
     AI_PROMPT_VERSION: parsed.data.AI_PROMPT_VERSION,
+    OCR_ENABLED: parsed.data.OCR_ENABLED,
+    OCR_LANGUAGES: parsed.data.OCR_LANGUAGES,
+    OCR_TIMEOUT_MS: parsed.data.OCR_TIMEOUT_MS,
+    OCR_MIN_NATIVE_CHARS: parsed.data.OCR_MIN_NATIVE_CHARS,
+    OCR_MIN_WORD_CONFIDENCE: parsed.data.OCR_MIN_WORD_CONFIDENCE,
     ANALYSIS_DAILY_LIMIT: parsed.data.ANALYSIS_DAILY_LIMIT,
     AI_QUESTION_DAILY_LIMIT: parsed.data.AI_QUESTION_DAILY_LIMIT,
     ASSET_URL_TTL_SECONDS: parsed.data.ASSET_URL_TTL_SECONDS
