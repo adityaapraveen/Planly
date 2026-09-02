@@ -7,20 +7,23 @@ const sign = (payload) => crypto
     .update(payload)
     .digest('base64url')
 
-const buildPayload = ({ drawingId, assetType, pageNumber, expires }) =>
-    [drawingId, assetType, pageNumber || '', expires].join(':')
+const buildPayload = ({ drawingId, assetType, pageNumber, regionId, expires }) =>
+    [drawingId, assetType, regionId || pageNumber || '', expires].join(':')
 
 export const createSignedAssetUrl = ({
     drawingId,
     assetType,
-    pageNumber
+    pageNumber,
+    regionId
 }) => {
     const expires = Math.floor(Date.now() / 1000) + config.ASSET_URL_TTL_SECONDS
-    const payload = buildPayload({ drawingId, assetType, pageNumber, expires })
+    const payload = buildPayload({ drawingId, assetType, pageNumber, regionId, expires })
     const signature = sign(payload)
     const path = assetType === 'drawing'
         ? `/api/assets/drawings/${drawingId}/file`
-        : `/api/assets/drawings/${drawingId}/pages/${pageNumber}`
+        : assetType === 'region'
+            ? `/api/assets/drawings/${drawingId}/regions/${regionId}`
+            : `/api/assets/drawings/${drawingId}/pages/${pageNumber}`
 
     return `${path}?expires=${expires}&signature=${signature}`
 }
@@ -29,6 +32,7 @@ export const verifySignedAssetRequest = ({
     drawingId,
     assetType,
     pageNumber,
+    regionId,
     expires,
     signature
 }) => {
@@ -42,6 +46,7 @@ export const verifySignedAssetRequest = ({
         drawingId,
         assetType,
         pageNumber,
+        regionId,
         expires: expiry
     }))
     const actualBuffer = Buffer.from(String(signature || ''))

@@ -260,16 +260,17 @@ To force a new versioned run:
 3. The local runner starts the run when a concurrency slot is available.
 4. The PDF is split into reusable rendered pages.
 5. PDF.js extracts native text objects, page geometry, rotation, and coordinate-aware text bounds before vision review. Scanned/no-text pages remain explicitly marked, and extraction failures do not masquerade as empty evidence.
-6. Each page is reviewed using the selected mode.
-7. The model response must satisfy the structured contract.
-8. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
-9. Visible callouts are persisted as graph edges and resolved against the corrected sheet index.
-10. Missing, ambiguous, and low-confidence reference targets are classified deterministically.
-11. Findings are normalized and persisted as relational `AnalysisIssue` records.
-12. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
-13. The client polls only while the selected run is pending or processing.
-14. A reviewer corrects the sheet index, inspects cited graph edges, and records an acknowledged, resolved, dismissed, or reopened decision.
-15. Every decision transition preserves reviewer identity, time, rationale, and note; dismissals require a reason.
+6. Planly renders a bounded set of six overlapping grid regions plus a probable title-block crop directly from the PDF. Each versioned crop retains full-page normalized coordinates and an explicit render status.
+7. Each page is reviewed using the selected mode. When available, the high-resolution title-block crop accompanies the overview image while the response contract continues to require full-page coordinates.
+8. The model response must satisfy the structured contract.
+9. Sheet metadata and field-level extraction evidence are persisted for every page; existing human corrections are never overwritten.
+10. Visible callouts are persisted as graph edges and resolved against the corrected sheet index.
+11. Missing, ambiguous, and low-confidence reference targets are classified deterministically.
+12. Findings are normalized and persisted as relational `AnalysisIssue` records.
+13. The run becomes `COMPLETED` or `FAILED` with diagnostic metadata.
+14. The client polls only while the selected run is pending or processing.
+15. A reviewer corrects the sheet index, inspects cited graph edges, and records an acknowledged, resolved, dismissed, or reopened decision.
+16. Every decision transition preserves reviewer identity, time, rationale, and note; dismissals require a reason.
 
 Malformed model output fails the run. It is never silently converted into a successful report with no findings.
 

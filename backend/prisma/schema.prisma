@@ -155,11 +155,43 @@ model DrawingPage {
 
   sheet           Sheet?
   sheetReferences SheetReference[]
+  regions         DrawingPageRegion[]
 
   createdAt DateTime @default(now())
 
   @@index([nativeExtractionStatus])
   @@map("drawing_pages")
+}
+
+model DrawingPageRegion {
+  id String @id @default(uuid())
+
+  key     String
+  kind    DrawingPageRegionKind
+  version String
+  status  DrawingPageRegionStatus @default(PENDING)
+  error   String?
+
+  x      Float
+  y      Float
+  width  Float
+  height Float
+  dpi    Int
+
+  pixelWidth  Int
+  pixelHeight Int
+  imagePath   String?
+  imageName   String?
+
+  pageId String
+  page   DrawingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageId, key])
+  @@index([pageId, status])
+  @@map("drawing_page_regions")
 }
 
 model Sheet {
@@ -368,6 +400,17 @@ enum NativePdfExtractionStatus {
   PENDING
   AVAILABLE
   NO_TEXT
+  FAILED
+}
+
+enum DrawingPageRegionKind {
+  GRID
+  TITLE_BLOCK
+}
+
+enum DrawingPageRegionStatus {
+  PENDING
+  AVAILABLE
   FAILED
 }
 
