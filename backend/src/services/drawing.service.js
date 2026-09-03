@@ -183,7 +183,13 @@ export const getDrawingPageArtifacts = async ({ userId, drawingId, pageNumber })
             nativeExtractionStatus: true,
             nativeExtractionVersion: true,
             nativeExtractionError: true,
-            nativeExtractedAt: true
+            nativeExtractedAt: true,
+            ocrText: true,
+            ocrArtifacts: true,
+            ocrStatus: true,
+            ocrVersion: true,
+            ocrError: true,
+            ocrExtractedAt: true
         }
     })
 
@@ -200,7 +206,18 @@ export const getDrawingPageArtifacts = async ({ userId, drawingId, pageNumber })
         text: page.nativeText,
         page: page.nativeArtifacts?.page || null,
         items: page.nativeArtifacts?.items || [],
-        stats: page.nativeArtifacts?.stats || null
+        stats: page.nativeArtifacts?.stats || null,
+        ocr: {
+            status: page.ocrStatus,
+            version: page.ocrVersion,
+            extractedAt: page.ocrExtractedAt,
+            error: page.ocrError,
+            text: page.ocrText,
+            words: page.ocrArtifacts?.words || [],
+            stats: page.ocrArtifacts?.stats || null,
+            engine: page.ocrArtifacts?.engine || null,
+            languages: page.ocrArtifacts?.languages || null
+        }
     }
 }
 
@@ -304,6 +321,16 @@ export const getDrawingReport = async ({ userId, drawingId }) => {
                 textAvailable: Boolean(page.nativeText),
                 page: page.nativeArtifacts?.page || null,
                 stats: page.nativeArtifacts?.stats || null
+            },
+            ocr: {
+                status: page.ocrStatus,
+                version: page.ocrVersion,
+                extractedAt: page.ocrExtractedAt,
+                error: page.ocrError,
+                textAvailable: Boolean(page.ocrText),
+                stats: page.ocrArtifacts?.stats || null,
+                engine: page.ocrArtifacts?.engine || null,
+                languages: page.ocrArtifacts?.languages || null
             },
             regions: page.regions.map((region) => ({
                 id: region.id,
