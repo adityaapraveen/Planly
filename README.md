@@ -8,6 +8,8 @@ The long-term product direction is **Architectural Intelligence**: a project-awa
 
 ## Current capabilities
 
+- Prompt-to-plan concept demo with local generation or AI requirements and room placement, geometry validation and correction, schematic preview, and editable DXF export. See [Plan Studio demo setup](docs/PLAN_STUDIO_DEMO.md).
+
 - Email/password authentication with short-lived access tokens.
 - Hashed, rotating, server-revocable refresh sessions.
 - Project and drawing management.

@@ -10,6 +10,7 @@ import { ProjectDetail } from './pages/ProjectDetail'
 import { Settings } from './pages/Settings'
 import { DrawingReport } from './pages/DrawingReport'
 import { RevisionComparison } from './pages/RevisionComparison'
+import { PlanStudio } from './pages/PlanStudio'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/plan-studio-demo" element={<PlanStudio demo />} />
 
           {/* Authenticated routes */}
           <Route element={<AppLayout />}>
@@ -29,6 +31,7 @@ export default function App() {
             <Route path="/drawings/:drawingId/report" element={<DrawingReport />} />
             <Route path="/drawings/:drawingId/compare" element={<RevisionComparison />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/plan-studio" element={<PlanStudio />} />
           </Route>
 
           {/* Fallback */}
