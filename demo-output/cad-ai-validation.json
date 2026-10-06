@@ -1,0 +1,50 @@
+{
+  "scope": "This generated example; not all application versions or arbitrary designs",
+  "reader": "ezdxf 1.4.4",
+  "results": [
+    {
+      "file": "planly-ai-layout-R2000-mm.dxf",
+      "version": "AC1015",
+      "drawingUnits": "mm",
+      "entities": 655,
+      "auditErrors": 0,
+      "auditRepairs": 0,
+      "coordinateAndLayerCheck": "PASS",
+      "roundtrip": "PASS",
+      "libreCAD": "Imported and rendered to PDF",
+      "renderedPdf": "planly-ai-layout-R2000-mm.pdf"
+    },
+    {
+      "file": "planly-ai-floor-1-R2000-mm.dxf",
+      "version": "AC1015",
+      "drawingUnits": "mm",
+      "entities": 389,
+      "auditErrors": 0,
+      "auditRepairs": 0,
+      "coordinateAndLayerCheck": "PASS",
+      "roundtrip": "PASS",
+      "libreCAD": "Imported and rendered to PDF",
+      "renderedPdf": "planly-ai-floor-1-R2000-mm.pdf"
+    },
+    {
+      "file": "planly-ai-floor-2-R2000-mm.dxf",
+      "version": "AC1015",
+      "drawingUnits": "mm",
+      "entities": 270,
+      "auditErrors": 0,
+      "auditRepairs": 0,
+      "coordinateAndLayerCheck": "PASS",
+      "roundtrip": "PASS",
+      "libreCAD": "Imported and rendered to PDF",
+      "renderedPdf": "planly-ai-floor-2-R2000-mm.pdf"
+    }
+  ],
+  "notRuntimeTested": [
+    "AutoCAD",
+    "Revit",
+    "Archicad",
+    "Rhino",
+    "BricsCAD",
+    "FreeCAD"
+  ]
+}

@@ -14,6 +14,7 @@ import { analysisRouter } from './routes/analysis.routes.js'
 import { requestContext } from './middlewares/requestContext.js'
 import { apiRateLimit, authRateLimit } from './middlewares/rateLimits.js'
 import { assetRouter } from './routes/asset.routes.js'
+import { planRouter } from './routes/plan.routes.js'
 
 
 export const app = express()
@@ -49,6 +50,7 @@ app.use('/api', apiRateLimit)
 app.use('/api/auth', authRateLimit, authRouter)
 app.use('/api/projects', projectRouter)
 app.use('/api/projects', drawingRouter)
+app.use('/api/plans', planRouter)
 app.use('/api', analysisRouter)
 
 app.use(notfound)

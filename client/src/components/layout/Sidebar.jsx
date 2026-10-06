@@ -5,6 +5,7 @@ import './Sidebar.css'
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/plan-studio', label: 'Plan Studio', icon: Sparkles },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
